@@ -1,7 +1,8 @@
-# web.7.0 — Browser e YouTube su Freenet
+# web.7.0 — Browser e FreenetTV su Freenet
 
 Browser e app video per la rete [Freenet](https://freenet.org) (infrastruttura freenet.org).  
-Due app pubblicate come contratti web, accessibili da **tutti i nodi** della rete.
+Due app pubblicate come contratti web, accessibili da **tutti i nodi** della rete.  
+Basato sull'ecosistema reale di **[github.com/freenet](https://github.com/freenet)**.
 
 ## Struttura
 
@@ -52,6 +53,25 @@ fdev website publish video/ --key fresnettv
 
 Freenet ti dà una chiave contratto → tutti i nodi la aprono su:
 `http://127.0.0.1:7509/v1/contract/web/<chiave>/`
+
+## Ecosistema github.com/freenet integrato
+
+| App | Chiave contratto | GitHub | Stato |
+|---|---|---|---|
+| Atlas | `771DvtP…` | [freenet/atlas](https://github.com/freenet/atlas) | ✅ attivo |
+| River Chat | `raAqMhM…` | [freenet/river](https://github.com/freenet/river) | ✅ attivo |
+| Freenet Mail | `122f6AR…` | [freenet/mail](https://github.com/freenet/mail) | ✅ attivo |
+| Delta | `EqJ5YpE…` | [freenet/delta](https://github.com/freenet/delta) | ✅ attivo |
+| Ghostkey Vault | `DLog47h…` | [freenet/ghostkeys](https://github.com/freenet/ghostkeys) | ✅ attivo |
+| freenet.org | `E4m5Wba…` | [freenet/web](https://github.com/freenet/web) | ✅ attivo |
+| Freenet Wiki | — | [freenet/freenet-wiki](https://github.com/freenet/freenet-wiki) | 🔧 sviluppo |
+| Raven | — | [freenet/raven](https://github.com/freenet/raven) | 🔧 sviluppo |
+| Blog | — | [freenet/blog](https://github.com/freenet/blog) | 🔧 sviluppo |
+| Freenet Git | — | [freenet/freenet-git](https://github.com/freenet/freenet-git) | 🔧 sviluppo |
+| Portal | — | [freenet/portal](https://github.com/freenet/portal) | 🔧 sviluppo |
+| Telemetry Dashboard | — | [freenet/freenet-telemetry-dashboard](https://github.com/freenet/freenet-telemetry-dashboard) | 🔧 sviluppo |
+
+Le chiavi reali vengono da `freenet-core/crates/core/src/server/home_page/assets/home.html`.
 
 ## Compatibilità nodi
 

@@ -1,8 +1,17 @@
 /**
  * fn-api.js — Freenet Web 7.0
- * Compatibilità con:
- *   - Nuovo Freenet (freenet-core, Rust)  → http://127.0.0.1:7509  /v1/contract/web/<key>/
- *   - Vecchio Freenet (Fred/Hyphanet, Java) → http://127.0.0.1:8888  /USK@…/  /CHK@…/
+ * Basato sul codice sorgente reale: github.com/freenet/freenet-core
+ *
+ * Compatibilità:
+ *   - Nuovo Freenet (freenet-core, Rust) → http://127.0.0.1:7509
+ *       GET /v1/version                           → {"version":"..."}
+ *       GET /v1/contract/web/{key}/               → serve webapp
+ *       WS  /v1/contract/command?encodingProtocol=native → ContractRequest
+ *   - Vecchio Freenet (Fred/Hyphanet, Java) → http://127.0.0.1:8888
+ *       /USK@<key>/0/   /CHK@<key>/   /SSK@<key>/
+ *
+ * Shell postMessage (da navigation_interceptor.js di freenet-core):
+ *   { __freenet_shell__: true, type: 'navigate', href: '...' }
  */
 
 'use strict';
@@ -11,49 +20,95 @@ const FN = (() => {
 
   // ── Configurazione nodi ───────────────────────────────────────────────────
   const NODES = [
-    { name: 'Freenet (nuovo, Rust)',  base: 'http://127.0.0.1:7509', type: 'new'  },
-    { name: 'Fred/Hyphanet (Java)',   base: 'http://127.0.0.1:8888', type: 'old'  },
-    { name: 'Fred/Hyphanet alt',      base: 'http://127.0.0.1:8080', type: 'old'  },
+    { name: 'Freenet (freenet-core, Rust)', base: 'http://127.0.0.1:7509', ws: 'ws://127.0.0.1:7509', type: 'new', apiVersion: 'v1' },
+    { name: 'Fred/Hyphanet (Java)',         base: 'http://127.0.0.1:8888', ws: null,                  type: 'old', apiVersion: null },
+    { name: 'Fred/Hyphanet alt',            base: 'http://127.0.0.1:8080', ws: null,                  type: 'old', apiVersion: null },
   ];
 
-  let activeNode = null;
+  let activeNode  = null;
+  let nodeVersion = null;
 
-  // Chiavi reali app Freenet (nuovo, da freenet-core/home.html)
+  // ── Chiavi contratto reali (da freenet-core/home.html) ───────────────────
+  // null = app su GitHub ma chiave non ancora pubblicata in rete
   const FN_APPS = {
-    atlas:     '771DvtPMwt2PumPyrFvsz7fpvU1gogcmb5qtS1yYEEH9',
-    river:     'raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv',
-    mail:      '122f6AR7PyF8d8mhczuNQM4xrLtBf5t8g2iB7PEVT7KC',
-    delta:     'EqJ5YpEEV3XLqEvKWLQHFhGAac2qXzSUoE6k2zbdnXBr',
-    ghostkey:  'DLog47hEsrtuGT4N5XCeMBG45m4n1aWM89tBZXue2E1N',
-    freenetorg:'E4m5WbaC4cdbpDjL82WfYUnrM9iMnfaaN8Tsn7UHPMjZ',
+    atlas:      '771DvtPMwt2PumPyrFvsz7fpvU1gogcmb5qtS1yYEEH9',
+    river:      'raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv',
+    mail:       '122f6AR7PyF8d8mhczuNQM4xrLtBf5t8g2iB7PEVT7KC',
+    delta:      'EqJ5YpEEV3XLqEvKWLQHFhGAac2qXzSUoE6k2zbdnXBr',
+    ghostkey:   'DLog47hEsrtuGT4N5XCeMBG45m4n1aWM89tBZXue2E1N',
+    freenetorg: 'E4m5WbaC4cdbpDjL82WfYUnrM9iMnfaaN8Tsn7UHPMjZ',
+    wiki:       null,
+    raven:      null,
+    blog:       null,
+    git:        null,
+    portal:     null,
+    telemetry:  null,
   };
 
-  // URL per tipo nodo
+  const FN_APP_INFO = {
+    atlas:      { label:'Atlas',            desc:'Discovery layer decentralizzato',         icon:'🗺️', gh:'freenet/atlas',                       active:true  },
+    river:      { label:'River Chat',       desc:'Chat di gruppo senza server',             icon:'💬', gh:'freenet/river',                       active:true  },
+    mail:       { label:'Freenet Mail',     desc:'Email decentralizzata',                   icon:'✉️', gh:'freenet/mail',                        active:true  },
+    delta:      { label:'Delta',            desc:'Costruttore siti decentralizzato',        icon:'🌐', gh:'freenet/delta',                       active:true  },
+    ghostkey:   { label:'Ghostkey Vault',   desc:'Gestione identità Ghostkey',              icon:'🔑', gh:'freenet/ghostkeys',                   active:true  },
+    freenetorg: { label:'freenet.org',      desc:'Specchio di freenet.org sulla rete',      icon:'🏠', gh:'freenet/web',                         active:true  },
+    wiki:       { label:'Freenet Wiki',     desc:'Wiki decentralizzato',                    icon:'📖', gh:'freenet/freenet-wiki',                active:false },
+    raven:      { label:'Raven',            desc:'Messaggistica su Freenet',                icon:'🐦', gh:'freenet/raven',                       active:false },
+    blog:       { label:'Blog ufficiale',   desc:'Blog Freenet pubblicato sulla rete',      icon:'📝', gh:'freenet/blog',                        active:false },
+    git:        { label:'Freenet Git',      desc:'Hosting git decentralizzato',             icon:'🔀', gh:'freenet/freenet-git',                 active:false },
+    portal:     { label:'Portal',           desc:'Portale di ingresso alla rete',           icon:'🚀', gh:'freenet/portal',                      active:false },
+    telemetry:  { label:'Telemetry',        desc:'Dashboard telemetria rete in tempo reale',icon:'📡', gh:'freenet/freenet-telemetry-dashboard', active:false },
+  };
+
+  // ── Costruzione URL per tipo nodo ─────────────────────────────────────────
   function contractUrl(node, key) {
+    if (!key) return null;
     if (node.type === 'new') return node.base + '/v1/contract/web/' + key + '/';
     return node.base + '/USK@' + key + ',AAAA,AQACAAE,AAACAAA/0/';
   }
-  function homeUrl(node) {
-    return node.type === 'new' ? node.base + '/' : node.base + '/';
-  }
 
-  // ── Stato nodo ────────────────────────────────────────────────────────────
+  // ── Rilevamento nodo (usa /v1/version per nuovo Freenet) ─────────────────
   async function detectNode() {
     for (const node of NODES) {
       try {
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 1500);
-        await fetch(homeUrl(node), { method: 'HEAD', signal: ctrl.signal, mode: 'no-cors' });
-        clearTimeout(t);
-        activeNode = node;
-        return node;
-      } catch { /* prova il prossimo */ }
+        const timer = setTimeout(() => ctrl.abort(), 1500);
+        let ok = false;
+        if (node.type === 'new') {
+          const r = await fetch(node.base + '/v1/version', { signal: ctrl.signal });
+          if (r.ok) {
+            const j = await r.json().catch(() => ({}));
+            nodeVersion = j.version || null;
+            ok = true;
+          }
+        } else {
+          await fetch(node.base + '/', { method: 'HEAD', signal: ctrl.signal, mode: 'no-cors' });
+          ok = true;
+        }
+        clearTimeout(timer);
+        if (ok) { activeNode = node; return node; }
+      } catch { /* prossimo nodo */ }
     }
     activeNode = null;
+    nodeVersion = null;
     return null;
   }
 
-  function getActiveNode() { return activeNode; }
+  function getActiveNode()  { return activeNode; }
+  function getNodeVersion() { return nodeVersion; }
+
+  // ── WebSocket per ContractRequest (solo nuovo Freenet) ───────────────────
+  // Endpoint reale da freenet-core/crates/fdev/src/commands/v1.rs:
+  //   ws://127.0.0.1:7509/v1/contract/command?encodingProtocol=native
+  function openContractWs(onmessage, onerror) {
+    const node = activeNode;
+    if (!node || node.type !== 'new') return null;
+    const ws = new WebSocket(node.ws + '/v1/contract/command?encodingProtocol=native');
+    ws.binaryType = 'arraybuffer';
+    ws.onmessage = onmessage || null;
+    ws.onerror   = onerror   || null;
+    return ws;
+  }
 
   // ── Risoluzione URL freenet:// ────────────────────────────────────────────
   function resolveUrl(fnUrl) {
@@ -62,23 +117,24 @@ const FN = (() => {
     if (fnUrl === 'freenet://video') return 'video.html';
 
     const ROUTE_MAP = {
-      'freenet://atlas':    FN_APPS.atlas,
-      'freenet://river':    FN_APPS.river,
-      'freenet://mail':     FN_APPS.mail,
-      'freenet://editor':   FN_APPS.delta,
-      'freenet://ghostkey': FN_APPS.ghostkey,
+      'freenet://atlas':      FN_APPS.atlas,
+      'freenet://river':      FN_APPS.river,
+      'freenet://mail':       FN_APPS.mail,
+      'freenet://editor':     FN_APPS.delta,
+      'freenet://delta':      FN_APPS.delta,
+      'freenet://ghostkey':   FN_APPS.ghostkey,
       'freenet://freenetorg': FN_APPS.freenetorg,
-      'freenet://impostazioni': node.base + '/config/',
+      'freenet://impostazioni': null,
     };
-    const key = ROUTE_MAP[fnUrl];
-    if (key) return typeof key === 'string' && key.startsWith('http') ? key : contractUrl(node, key);
 
-    // URL raw: http(s):// o /v1/contract o /USK@
+    if (fnUrl in ROUTE_MAP) {
+      const key = ROUTE_MAP[fnUrl];
+      if (!key) return node.base + '/config/';
+      return contractUrl(node, key);
+    }
+
     if (fnUrl.startsWith('http')) return fnUrl;
-
-    // Formato vecchio: USK@..., CHK@..., SSK@...
     if (/^(USK|CHK|SSK)@/.test(fnUrl)) return node.base + '/' + fnUrl;
-
     return node.base + '/v1/contract/web/' + fnUrl.replace('freenet://', '') + '/';
   }
 
@@ -111,15 +167,15 @@ const FN = (() => {
   }
 
   // ── Account locali ────────────────────────────────────────────────────────
-  function getAccounts() { try { return JSON.parse(localStorage.getItem('fn_acc')||'{}'); } catch { return {}; } }
-  function saveAccounts(a){ try { localStorage.setItem('fn_acc', JSON.stringify(a)); } catch {} }
-  function getCurrentUser()  { try { return localStorage.getItem('fn_user')||null; } catch { return null; } }
-  function setCurrentUser(u) { try { localStorage.setItem('fn_user', u||''); } catch {} }
+  function getAccounts()    { try { return JSON.parse(localStorage.getItem('fn_acc')||'{}'); } catch { return {}; } }
+  function saveAccounts(a)  { try { localStorage.setItem('fn_acc', JSON.stringify(a)); } catch {} }
+  function getCurrentUser() { try { return localStorage.getItem('fn_user')||null; } catch { return null; } }
+  function setCurrentUser(u){ try { localStorage.setItem('fn_user', u||''); } catch {} }
 
   function login(name, pass) {
     const acc = getAccounts();
     if (!name || !acc[name]) return 'not_found';
-    if (acc[name] !== btoa(pass))  return 'wrong_pass';
+    if (acc[name] !== btoa(pass)) return 'wrong_pass';
     setCurrentUser(name);
     return 'ok';
   }
@@ -136,7 +192,7 @@ const FN = (() => {
   }
   function logout() { setCurrentUser(null); }
 
-  // ── Chiave contratto (per pubblicare il proprio YouTube) ──────────────────
+  // ── Chiave contratto preview (per pubblicare il proprio FreenetTV) ────────
   function makeContractPreview(username) {
     const seed = [...username].reduce((a,c)=>a^c.charCodeAt(0),0x1337);
     const pseudo = btoa(username+seed+'fresnettv').replace(/[=+/]/g,'').substring(0,44).padEnd(44,'A');
@@ -144,37 +200,34 @@ const FN = (() => {
     return node.base + '/v1/contract/web/' + pseudo + '/';
   }
 
-  // ── Pubblica su Freenet (istruzione) ─────────────────────────────────────
+  // ── Guida pubblicazione (fdev website init/publish) ──────────────────────
   function publishGuide(username) {
     const name = username.toLowerCase().replace(/[^a-z0-9-]/g,'-');
     return [
-      '# Pubblica il tuo YouTube su Freenet',
+      '# Pubblica il tuo FreenetTV su Freenet',
       '',
-      '## Passo 1 — genera la chiave di firma',
-      '  fdev website init ' + name + '-tv',
+      '# 1. Genera la chiave di firma (ed25519)',
+      'fdev website init ' + name + '-tv',
       '',
-      '## Passo 2 — copia i file',
-      '  mkdir ~/my-fresnettv',
-      '  cp video.html ~/my-fresnettv/index.html',
-      '  cp fn-theme.css fn-api.js ~/my-fresnettv/',
+      '# 2. Copia i file',
+      'mkdir ~/my-fresnettv',
+      'cp video.html ~/my-fresnettv/index.html',
+      'cp fn-theme.css fn-api.js ~/my-fresnettv/',
       '',
-      '## Passo 3 — pubblica',
-      '  fdev website publish ~/my-fresnettv --key ' + name + '-tv',
+      '# 3. Pubblica sulla rete Freenet',
+      'fdev website publish ~/my-fresnettv --key ' + name + '-tv',
       '',
-      '## Passo 4 — condividi',
-      '  Freenet ti darà una chiave contratto.',
-      '  Tutti i nodi accedono a:',
-      '  http://127.0.0.1:7509/v1/contract/web/<chiave>/',
-      '',
-      '## Nota sul vecchio Fred/Hyphanet (Java)',
-      '  Usa: fdev freesite publish ~/my-fresnettv',
-      '  Accesso: http://127.0.0.1:8888/USK@<chiave>/0/',
+      '# → Freenet restituisce la chiave contratto.',
+      '# → Tutti i nodi accedono a:',
+      '# → http://127.0.0.1:7509/v1/contract/web/<chiave>/',
     ].join('\n');
   }
 
   return {
-    NODES, FN_APPS,
-    detectNode, getActiveNode, resolveUrl,
+    NODES, FN_APPS, FN_APP_INFO,
+    detectNode, getActiveNode, getNodeVersion,
+    contractUrl, resolveUrl,
+    openContractWs,
     getSiteArchive, recordVisit,
     getVideoArchive, saveVideoArchive, addVideo,
     getVD, saveVD,

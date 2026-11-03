@@ -200,20 +200,33 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
       <button onclick="doSearch()">🔍</button>
     </div>
 
+    <div style="font-size:11px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;align-self:flex-start;max-width:660px;padding:0 4px">Web 7.0 — Social Decentralizzato</div>
     <div class="quick-links">
-      <a class="ql" href="../video/index.html"><span>▶️</span><span>Il mio YouTube</span></a>
+      <a class="ql" onclick="navigate('freenet://video')"><span>▶️</span><span>FreenetTV</span></a>
+      <a class="ql" onclick="navigate('freenet://photos')"><span>📸</span><span>FreenetGram</span></a>
+      <a class="ql" onclick="navigate('freenet://posts')"><span>🐤</span><span>FreenetPosts</span></a>
       <a class="ql" onclick="navigate('freenet://river')"><span>💬</span><span>River Chat</span></a>
-      <a class="ql" onclick="navigate('freenet://atlas')"><span>🔍</span><span>Atlas Search</span></a>
-      <a class="ql" onclick="navigate('freenet://editor')"><span>✏️</span><span>Delta Editor</span></a>
-      <a class="ql" onclick="navigate('freenet://mail')"><span>✉️</span><span>Freenet Mail</span></a>
-      <a class="ql" onclick="navigate('freenet://ghostkey')"><span>🔑</span><span>Ghostkey ID</span></a>
+      <a class="ql" onclick="navigate('freenet://mail')"><span>✉️</span><span>Mail</span></a>
+      <a class="ql" onclick="navigate('freenet://ghostkey')"><span>🔑</span><span>Ghostkey</span></a>
+    </div>
+
+    <div style="font-size:11px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;margin-top:8px;align-self:flex-start;max-width:660px;padding:0 4px">App Freenet (github.com/freenet)</div>
+    <div class="quick-links">
+      <a class="ql" onclick="navigate('freenet://atlas')"><span>🗺️</span><span>Atlas</span></a>
+      <a class="ql" onclick="navigate('freenet://delta')"><span>🌐</span><span>Delta</span></a>
+      <a class="ql" onclick="navigate('freenet://freenetorg')"><span>🏠</span><span>freenet.org</span></a>
+      <a class="ql" style="opacity:.6" onclick="window.open('https://github.com/freenet/freenet-wiki','_blank')"><span>📖</span><span>Wiki</span></a>
+      <a class="ql" style="opacity:.6" onclick="window.open('https://github.com/freenet/raven','_blank')"><span>🐦</span><span>Raven</span></a>
+      <a class="ql" style="opacity:.6" onclick="window.open('https://github.com/freenet/freenet-git','_blank')"><span>🔀</span><span>Git</span></a>
       <a class="ql" onclick="navigate('freenet://impostazioni')"><span>⚙️</span><span>Impostazioni</span></a>
     </div>
+    <div style="height:24px"></div>
 
     <div class="node-info-box">
       <h3>Stato nodo Freenet</h3>
       <div class="ni-row"><span>Nodo locale</span><span class="ni-val">http://127.0.0.1:7509</span></div>
       <div class="ni-row"><span>Infrastruttura</span><span class="ni-val"><a href="https://freenet.org" target="_blank" style="color:var(--accent)">freenet.org</a></span></div>
+      <div class="ni-row"><span>Repository</span><span class="ni-val"><a href="https://github.com/freenet" target="_blank" style="color:var(--accent)">github.com/freenet</a></span></div>
       <div class="ni-row"><span>Stato</span><span class="ni-val" id="ni-net">—</span></div>
       <div class="ni-row"><span>Peer connessi</span><span class="ni-val" id="ni-peers">—</span></div>
       <div class="ni-row"><span>River Chat</span><span class="ni-val"><a onclick="navigate('freenet://river')" style="color:var(--accent);cursor:pointer">Apri</a></span></div>
@@ -278,28 +291,28 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 </div>
 
 <script>
-// ── Freenet node (freenet.org infrastructure, porta 7509) ────────────────────
-const NODE = 'http://127.0.0.1:7509';
-// Chiavi reali dei contratti web Freenet (da freenet-core/home.html)
-const FN_APPS = {
-  atlas:    '771DvtPMwt2PumPyrFvsz7fpvU1gogcmb5qtS1yYEEH9',
-  river:    'raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv',
-  mail:     '122f6AR7PyF8d8mhczuNQM4xrLtBf5t8g2iB7PEVT7KC',
-  delta:    'EqJ5YpEEV3XLqEvKWLQHFhGAac2qXzSUoE6k2zbdnXBr',
-  ghostkey: 'DLog47hEsrtuGT4N5XCeMBG45m4n1aWM89tBZXue2E1N',
-  freenetorg:'E4m5WbaC4cdbpDjL82WfYUnrM9iMnfaaN8Tsn7UHPMjZ',
-};
-function contractUrl(key) { return NODE + '/v1/contract/web/' + key + '/'; }
-const ROUTES = {
-  'freenet://home':       null,
-  'freenet://atlas':      contractUrl(FN_APPS.atlas),
-  'freenet://river':      contractUrl(FN_APPS.river),
-  'freenet://mail':       contractUrl(FN_APPS.mail),
-  'freenet://editor':     contractUrl(FN_APPS.delta),
-  'freenet://ghostkey':   contractUrl(FN_APPS.ghostkey),
-  'freenet://impostazioni': NODE + '/config/',
-  'freenet://video':      'video.html',
-};
+// Usa FN da fn-api.js (tutti i contratti e le app del progetto github.com/freenet)
+function contractUrl(key) {
+  const n = (FN.getActiveNode() || FN.NODES[0]);
+  return n.base + '/v1/contract/web/' + key + '/';
+}
+function buildRoutes() {
+  const apps = FN.FN_APPS;
+  const node = FN.getActiveNode() || FN.NODES[0];
+  return {
+    'freenet://home':         null,
+    'freenet://atlas':        apps.atlas    ? contractUrl(apps.atlas)    : null,
+    'freenet://river':        apps.river    ? contractUrl(apps.river)    : null,
+    'freenet://mail':         apps.mail     ? contractUrl(apps.mail)     : null,
+    'freenet://editor':       apps.delta    ? contractUrl(apps.delta)    : null,
+    'freenet://delta':        apps.delta    ? contractUrl(apps.delta)    : null,
+    'freenet://ghostkey':     apps.ghostkey ? contractUrl(apps.ghostkey) : null,
+    'freenet://freenetorg':   apps.freenetorg ? contractUrl(apps.freenetorg) : null,
+    'freenet://impostazioni': node.base + '/config/',
+    'freenet://video':        'video.html',
+  };
+}
+const ROUTES = buildRoutes();
 
 // ── node status check ─────────────────────────────────────────────────────────
 let nodeOnline = false;
@@ -363,10 +376,13 @@ function loadUrl(url, skipHist) {
     home.style.display  = 'flex';
     return;
   }
-  // special: video page
-  if (url === 'freenet://video' || url === 'video.html') {
-    window.open('video.html', '_self'); return;
-  }
+  // app sociali locali
+  const LOCAL_APPS = {
+    'freenet://video':  'video.html',
+    'freenet://photos': 'photos.html',
+    'freenet://posts':  'posts.html',
+  };
+  if (LOCAL_APPS[url]) { window.open(LOCAL_APPS[url], '_self'); return; }
   // usa FN.resolveUrl per compatibilità nuovo/vecchio Freenet
   const target = FN.resolveUrl(url) || url;
   if (target === 'video.html') { window.open('video.html', '_self'); return; }
@@ -388,8 +404,20 @@ function loadUrl(url, skipHist) {
 function doSearch() {
   const q = document.getElementById('search-q').value.trim();
   if (!q) return;
-  navigate(NODE + '/search/?q=' + encodeURIComponent(q));
+  const node = FN.getActiveNode() || FN.NODES[0];
+  // Se sembra una chiave contratto naviga direttamente
+  if (/^[A-Za-z0-9_-]{30,60}$/.test(q)) { navigate('freenet://' + q); return; }
+  navigate(node.base + '/search/?q=' + encodeURIComponent(q));
 }
+
+// ── Shell postMessage handler (da freenet-core navigation_interceptor.js) ────
+// I contratti dentro iframe mandano { __freenet_shell__: true, type:'navigate', href:'...' }
+window.addEventListener('message', function(e) {
+  if (!e.data || !e.data.__freenet_shell__) return;
+  if (e.data.type === 'navigate' && e.data.href) {
+    navigate(e.data.href);
+  }
+});
 
 // ── panels ────────────────────────────────────────────────────────────────────
 const SPAM = [
