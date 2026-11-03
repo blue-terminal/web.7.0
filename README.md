@@ -1,63 +1,63 @@
 # web.7.0
 🌐 Web 7.0 — Decentralized Infrastructure Project
 
-Web 7.0 is a research-driven initiative exploring a next-generation decentralized web infrastructure built on the peer-to-peer architecture of Hyphanet (successor to Freenet).
+FreeWeb 7.0 è un'iniziativa guidata dalla ricerca che esplora un'infrastruttura web decentralizzata di nuova generazione basata sull'architettura peer-to-peer di Freenet (successore di Hyphanet).
 
-The project focuses on infrastructure-level decentralization rather than application-layer trends, aiming to address structural weaknesses of the modern web.
+Il progetto si concentra sulla decentralizzazione a livello infrastrutturale più che sulle tendenze a livello applicativo, con l'obiettivo di affrontare le debolezze strutturali del web moderno.
 
-🎯 Vision
+🎯 Visione
 
-Web 7.0 is designed around four foundational principles:
+Il Web 7.0 è progettato per arrivare a quattro principi fondamentali:
 
-🛡️ Data Sovereignty — Users retain control over their data.
+🛡️ Sovranità dei dati — Gli utenti mantengono il controllo sui propri dati.
 
-🏗️ Infrastructure Resilience — Elimination of single points of failure.
+🏗️ Resilienza infrastrutturale — Eliminazione dei singoli punti di guasto.
 
-🔐 Native Privacy — End-to-end encryption and anonymity by default.
+🔐 Privacy nativa — Crittografia end-to-end e anonimo predefiniti.
 
-🌍 Technological Independence — Reduced reliance on centralized platforms.
+🌍 Indipendenza tecnologica — Riduzione della dipendenza dalle piattaforme centralizzate.
 
-🏛️ Core Architecture
+🏛️ Architettura di base
 
-Web 7.0 is structured in conceptual layers:
+Il Web 7.0 è strutturato in livelli concettuali:
 
-🧱 Layer 1 — Network Infrastructure
+🧱 Livello 1 — Infrastruttura di rete
 
-Built on distributed node architecture powered by Hyphanet.
+Basato sull'architettura dei nodi distribuiti basata su Hyphanet.
 
-🔑 Layer 2 — Identity & Authentication (Research Phase)
+🔑 Livello 2 — Identità e autenticazione (fase di ricerca)
 
-Exploration of decentralized identity models and distributed trust mechanisms.
+Esplorazione di modelli di identità decentralizzati e meccanismi di fiducia distribuita.
 
-🌐 Layer 3 — Application Interface Layer
+🌐 Livello 3 — Livello di interfaccia dell'applicazione
 
-Web-accessible services operating over censorship-resistant infrastructure.
+Servizi accessibili dal Web che operano su infrastrutture resistenti alla censura.
 
-🔍 Threat Model
+🔍 Modello di minaccia
 
-Web 7.0 is designed to mitigate:
+Il Web 7.0 è progettato per mitigare:
 
-Centralized censorship
+Censura centralizzata
 
-Infrastructure shutdown attempts
+Tentativi di arresto dell'infrastruttura
 
-Mass surveillance architectures
+Architettura di sorveglia di massa
 
-Tracking-based monetization ecosystems
+Ecosistemi di monetizzazione basati sul monitoraggio
 
-🛠️ Technical Objectives (2026)
+🛠️ Obiettivi tecnici (2026)
 
-📡 Expand and optimize Hyphanet node deployment
+📡 Espandi e ottimizza la distribuzione del nodo Hyphanet
 
-📜 Draft decentralized identity protocol specifications
+📜 Bozza di specifiche del protocollo di identità decentrato
 
-📖 Publish technical documentation and architecture papers
+📖 Pubblicare documentazione tecnica e documenti di architettura
 
-🧪 Develop experimental infrastructure prototypes
+🧪 Sviluppo prototipi di infrastrutture sperimentali
 
-📊 Project Status
+📊 Stato del progetto
 
-Web 7.0 is currently in the research and architectural design phase.
+Il Web 7.0 è effettivamente in fase di ricerca e produzione architettonica.
 Initial documentation and experimental specifications will be published progressively.
 
 🤝 How to Contribute
