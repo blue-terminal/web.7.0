@@ -1,0 +1,12 @@
+# Configurazione app Browser Freenet
+# Pubblicata con: fdev website publish . --key browser-fn
+[app]
+name    = "Browser Freenet"
+version = "1.0.0"
+description = "Browser per la rete Freenet — naviga siti, accedi alle app, anti-spam MAC"
+
+[publish]
+# Inizializza la chiave con: fdev website init browser-fn
+key = "browser-fn"
+directory = "."
+entry = "index.html"

@@ -1,4 +1,69 @@
-# web.7.0
+# web.7.0 — Browser e YouTube su Freenet
+
+Browser e app video per la rete [Freenet](https://freenet.org) (infrastruttura freenet.org).  
+Due app pubblicate come contratti web, accessibili da **tutti i nodi** della rete.
+
+## Struttura
+
+```
+web70/
+├── browser/                ← App 1: Browser Freenet
+│   ├── index.html          ← browser con iframe sul nodo locale
+│   ├── fn-api.js           ← API Freenet (compatibilità nuovo + vecchio)
+│   ├── fn-theme.css        ← stili comuni
+│   └── freenet.toml        ← config pubblicazione
+│
+├── video/                  ← App 2: FreenetTV (YouTube personale)
+│   ├── index.html          ← griglia video, player, like, commenti
+│   ├── fn-api.js
+│   ├── fn-theme.css
+│   └── freenet.toml        ← config pubblicazione
+│
+├── shared/                 ← Librerie condivise
+│   ├── fn-api.js
+│   └── fn-theme.css
+│
+├── fn-api.js               ← API Freenet (compatibilità nuovo Rust + vecchio Fred/Java)
+├── fn-theme.css            ← CSS comuni
+├── index.html              ← browser (versione radice)
+├── video.html              ← FreenetTV (versione radice)
+└── pubblica.sh             ← pubblica entrambe le app su Freenet
+```
+
+## Pubblicare su Freenet
+
+Richiede [`fdev`](https://github.com/freenet/freenet-core):
+
+```bash
+./pubblica.sh
+```
+
+Oppure manualmente:
+
+```bash
+# Browser Freenet
+fdev website init browser-fn
+fdev website publish browser/ --key browser-fn
+
+# FreenetTV (YouTube personale)
+fdev website init fresnettv
+fdev website publish video/ --key fresnettv
+```
+
+Freenet ti dà una chiave contratto → tutti i nodi la aprono su:
+`http://127.0.0.1:7509/v1/contract/web/<chiave>/`
+
+## Compatibilità nodi
+
+| Versione | Porta | URL |
+|---|---|---|
+| Nuovo Freenet (Rust, freenet.org) | 7509 | `/v1/contract/web/<chiave>/` |
+| Vecchio Fred/Hyphanet (Java) | 8888 | `/USK@<chiave>/0/` |
+
+`fn-api.js` rileva automaticamente quale nodo è attivo.
+
+---
+
 🌐 Web 7.0 — Decentralized Infrastructure Project
 
 FreeWeb 7.0 è un'iniziativa guidata dalla ricerca che esplora un'infrastruttura web decentralizzata di nuova generazione basata sull'architettura peer-to-peer di Freenet (successore di Hyphanet).
