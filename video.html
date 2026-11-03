@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Il mio YouTube — FreenetTV</title>
+<link rel="stylesheet" href="fn-theme.css">
+<script src="fn-api.js"></script>
 <style>
 :root {
   --bg:     #0d1b2a;
@@ -320,7 +322,10 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 
 <script>
 // ── video catalogue ───────────────────────────────────────────────────────────
-let MY_VIDEOS = [];
+// Archivio persistente: video caricati salvati in localStorage
+function loadMyVideos() { try { return JSON.parse(localStorage.getItem('fn_my_videos')||'[]'); } catch { return []; } }
+function saveMyVideos(v){ try { localStorage.setItem('fn_my_videos', JSON.stringify(v)); } catch {} }
+let MY_VIDEOS = loadMyVideos();
 const DEFAULT_VIDEOS = [
   { id:1,  emoji:'🔐', title:'Come funziona la cifratura end-to-end',       ch:'PrivacyLab',   views:'48K', ago:'3 giorni fa',  dur:'18:24', cat:'privacy', live:false, key:'CHK@AAAA,BBB,AAEC/video1.mp4' },
   { id:2,  emoji:'🌐', title:'Freenet 0.2 — la nuova rete decentralizzata', ch:'FreenetTV',    views:'132K',ago:'1 settimana',  dur:'24:10', cat:'tech',    live:false, key:'CHK@BBBB,CCC,AAEC/video2.mp4' },
@@ -370,15 +375,22 @@ function doSearch() {
   renderGrid(q ? allVideos().filter(v=>v.title.toLowerCase().includes(q)||v.ch.toLowerCase().includes(q)) : allVideos());
 }
 
-// ── USK key ───────────────────────────────────────────────────────────────────
-function makeUSK(name) {
+// ── Freenet contract key ──────────────────────────────────────────────────────
+// La chiave reale viene generata da: fdev website init <nome>
+// Poi: fdev website publish . --key <nome>
+// Nodo: http://127.0.0.1:7509 (infrastruttura freenet.org)
+function makeContractKey(name) {
   const seed = [...name].reduce((a,c)=>a^c.charCodeAt(0),0x1337);
-  const pseudo = btoa(name+seed).replace(/[=+/]/g,'').substring(0,44).padEnd(44,'A');
-  return `USK@${pseudo},AAACAAE,AQACAAE/FreenetTV/0/`;
+  const pseudo = btoa(name + seed + 'fresnettv').replace(/[=+/]/g,'').substring(0,44).padEnd(44,'A');
+  return `/v1/contract/web/${pseudo}/`;
 }
 function updateKeyBar(name) {
-  if (!name) { document.getElementById('my-usk-key').textContent = 'USK@… — accedi per generare la tua chiave'; return; }
-  document.getElementById('my-usk-key').textContent = makeUSK(name);
+  if (!name) {
+    document.getElementById('my-usk-key').textContent = '/v1/contract/web/… — accedi e pubblica per ottenere la chiave reale';
+    return;
+  }
+  const k = 'http://127.0.0.1:7509' + makeContractKey(name);
+  document.getElementById('my-usk-key').textContent = k;
 }
 function copyKey() {
   const k = document.getElementById('my-usk-key').textContent;
@@ -387,8 +399,19 @@ function copyKey() {
 function showPubGuide() {
   const u = getUser();
   if (!u) { openLogin(); return; }
-  const k = makeUSK(u);
-  alert(`Per pubblicare il tuo YouTube su Freenet:\n\n1. Copia questa chiave:\n   ${k}\n\n2. Nella cartella del sito esegui:\n   fdev website publish\n\n3. Condividi la chiave con altri nodi — tutti potranno accedere al tuo YouTube su 127.0.0.1:7509/${k}`);
+  const name = u.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  alert(`Come pubblicare il tuo YouTube su Freenet (freenet.org):\n\n` +
+    `1. Inizializza una chiave di firma:\n` +
+    `   fdev website init ${name}-tv\n\n` +
+    `2. Metti index.html e video.html in una cartella:\n` +
+    `   mkdir ~/fresnettv && cp video.html ~/fresnettv/index.html\n\n` +
+    `3. Pubblica su Freenet:\n` +
+    `   fdev website publish ~/fresnettv --key ${name}-tv\n\n` +
+    `4. Freenet ti darà una chiave contratto, es.:\n` +
+    `   /v1/contract/web/ABCD1234.../\n\n` +
+    `5. Tutti i nodi accedono al tuo YouTube su:\n` +
+    `   http://127.0.0.1:7509/v1/contract/web/<chiave>/\n\n` +
+    `Condividi quella URL con tutti i nodi!`);
 }
 
 // ── player ────────────────────────────────────────────────────────────────────
@@ -472,19 +495,21 @@ function postCmt() {
 }
 
 // ── upload ────────────────────────────────────────────────────────────────────
-let nextId = 100;
 function openUpload()   { const u=getUser(); if(!u){openLogin();return;} document.getElementById('upload-modal').classList.add('open'); }
 function closeUpload(e) { if(!e||e.target===document.getElementById('upload-modal')) document.getElementById('upload-modal').classList.remove('open'); }
 function publishVideo() {
   const t=document.getElementById('u-title').value.trim();
   if(!t){alert('Inserisci un titolo');return;}
   const cat=document.getElementById('u-cat').value.trim()||'tech';
-  const pseudo=btoa(t+Date.now()).replace(/[=+/]/g,'').substring(0,44);
-  const key=`CHK@${pseudo},AAEC/video_${nextId}.mp4`;
-  MY_VIDEOS.push({id:nextId++,emoji:'🎬',title:t,ch:getUser()||'Tu',views:'0',ago:'Adesso',dur:'—',cat,live:false,key});
+  const ts=Date.now();
+  const pseudo=btoa(t+ts).replace(/[=+/]/g,'').substring(0,44).padEnd(44,'A');
+  const key='/v1/contract/web/'+pseudo+'/';
+  const v={id:ts,emoji:'🎬',title:t,ch:getUser()||'Tu',views:'0',ago:new Date().toLocaleString('it'),dur:'—',cat,live:false,key};
+  MY_VIDEOS.push(v);
+  saveMyVideos(MY_VIDEOS);  // archivio permanente
   renderGrid(allVideos());
   closeUpload();
-  alert(`Video pubblicato!\nChiave Freenet:\n${key}\n\nCondividi questa chiave con altri nodi.`);
+  alert(`Video aggiunto all'archivio!\n\nChiave contratto Freenet:\nhttp://127.0.0.1:7509${key}\n\nCondividi con tutti i nodi.`);
 }
 
 // ── auth ──────────────────────────────────────────────────────────────────────

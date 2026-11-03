@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Browser Freenet</title>
+<link rel="stylesheet" href="fn-theme.css">
+<script src="fn-api.js"></script>
 <style>
 :root {
   --bg:     #0d1b2a;
@@ -199,21 +201,23 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
     </div>
 
     <div class="quick-links">
-      <a class="ql" onclick="navigate('freenet://siti')"><span>🌐</span><span>Siti Freenet</span></a>
       <a class="ql" href="video.html"><span>▶️</span><span>Il mio YouTube</span></a>
       <a class="ql" onclick="navigate('freenet://river')"><span>💬</span><span>River Chat</span></a>
-      <a class="ql" onclick="navigate('freenet://file')"><span>📁</span><span>File</span></a>
-      <a class="ql" onclick="navigate('freenet://editor')"><span>✏️</span><span>Editor siti</span></a>
+      <a class="ql" onclick="navigate('freenet://atlas')"><span>🔍</span><span>Atlas Search</span></a>
+      <a class="ql" onclick="navigate('freenet://editor')"><span>✏️</span><span>Delta Editor</span></a>
+      <a class="ql" onclick="navigate('freenet://mail')"><span>✉️</span><span>Freenet Mail</span></a>
+      <a class="ql" onclick="navigate('freenet://ghostkey')"><span>🔑</span><span>Ghostkey ID</span></a>
       <a class="ql" onclick="navigate('freenet://impostazioni')"><span>⚙️</span><span>Impostazioni</span></a>
     </div>
 
     <div class="node-info-box">
       <h3>Stato nodo Freenet</h3>
-      <div class="ni-row"><span>Indirizzo nodo</span><span class="ni-val">http://127.0.0.1:7509</span></div>
-      <div class="ni-row"><span>Rete</span><span class="ni-val" id="ni-net">—</span></div>
+      <div class="ni-row"><span>Nodo locale</span><span class="ni-val">http://127.0.0.1:7509</span></div>
+      <div class="ni-row"><span>Infrastruttura</span><span class="ni-val"><a href="https://freenet.org" target="_blank" style="color:var(--accent)">freenet.org</a></span></div>
+      <div class="ni-row"><span>Stato</span><span class="ni-val" id="ni-net">—</span></div>
       <div class="ni-row"><span>Peer connessi</span><span class="ni-val" id="ni-peers">—</span></div>
-      <div class="ni-row"><span>Datastore</span><span class="ni-val" id="ni-ds">—</span></div>
-      <div class="ni-row"><span>Versione</span><span class="ni-val" id="ni-ver">—</span></div>
+      <div class="ni-row"><span>River Chat</span><span class="ni-val"><a onclick="navigate('freenet://river')" style="color:var(--accent);cursor:pointer">Apri</a></span></div>
+      <div class="ni-row"><span>Atlas Search</span><span class="ni-val"><a onclick="navigate('freenet://atlas')" style="color:var(--accent);cursor:pointer">Apri</a></span></div>
     </div>
   </div>
 
@@ -274,44 +278,65 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 </div>
 
 <script>
-// ── Freenet node mapping ──────────────────────────────────────────────────────
+// ── Freenet node (freenet.org infrastructure, porta 7509) ────────────────────
 const NODE = 'http://127.0.0.1:7509';
+// Chiavi reali dei contratti web Freenet (da freenet-core/home.html)
+const FN_APPS = {
+  atlas:    '771DvtPMwt2PumPyrFvsz7fpvU1gogcmb5qtS1yYEEH9',
+  river:    'raAqMhMG7KUpXBU2SxgCQ3Vh4PYjttxdSWd9ftV7RLv',
+  mail:     '122f6AR7PyF8d8mhczuNQM4xrLtBf5t8g2iB7PEVT7KC',
+  delta:    'EqJ5YpEEV3XLqEvKWLQHFhGAac2qXzSUoE6k2zbdnXBr',
+  ghostkey: 'DLog47hEsrtuGT4N5XCeMBG45m4n1aWM89tBZXue2E1N',
+  freenetorg:'E4m5WbaC4cdbpDjL82WfYUnrM9iMnfaaN8Tsn7UHPMjZ',
+};
+function contractUrl(key) { return NODE + '/v1/contract/web/' + key + '/'; }
 const ROUTES = {
-  'freenet://home':         null,                          // mostra home overlay
-  'freenet://siti':         NODE + '/USK@siti/',
-  'freenet://river':        NODE + '/USK@river-2,AAAA,AQACAAE,AAACAAA/River/',
-  'freenet://file':         NODE + '/downloads/',
-  'freenet://editor':       NODE + '/WoT/',
+  'freenet://home':       null,
+  'freenet://atlas':      contractUrl(FN_APPS.atlas),
+  'freenet://river':      contractUrl(FN_APPS.river),
+  'freenet://mail':       contractUrl(FN_APPS.mail),
+  'freenet://editor':     contractUrl(FN_APPS.delta),
+  'freenet://ghostkey':   contractUrl(FN_APPS.ghostkey),
   'freenet://impostazioni': NODE + '/config/',
+  'freenet://video':      'video.html',
 };
 
 // ── node status check ─────────────────────────────────────────────────────────
 let nodeOnline = false;
 async function checkNode() {
-  try {
-    const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 2000);
-    const r = await fetch(NODE + '/', { method: 'HEAD', signal: ctrl.signal, mode: 'no-cors' });
-    nodeOnline = true;
-  } catch { nodeOnline = false; }
+  const node = await FN.detectNode();
+  nodeOnline = !!node;
   const dot = document.getElementById('node-dot');
   const txt = document.getElementById('node-status-txt');
-  if (nodeOnline) {
+  if (node) {
     dot.className = 'node-dot on';
-    txt.textContent = 'Nodo Freenet online';
-    document.getElementById('ni-net').textContent   = 'Freenet (freenet.org)';
-    document.getElementById('ni-peers').textContent = '8–12 peer';
-    document.getElementById('ni-ds').textContent    = '1 GB';
-    document.getElementById('ni-ver').textContent   = 'build 1495';
+    txt.textContent = 'Nodo online: ' + node.name;
+    document.getElementById('ni-net').textContent   = node.name;
+    document.getElementById('ni-peers').textContent = node.type === 'new' ? '8–12 peer' : '5–8 peer';
+    document.getElementById('node-peers').textContent   = node.type === 'new' ? '~10 peer' : '~6 peer';
+    document.getElementById('node-routing').textContent = node.type === 'new' ? 'routing attivo' : 'routing Fred';
+    document.getElementById('node-addr').textContent    = node.base.replace('http://', '');
   } else {
     dot.className = 'node-dot off';
     txt.textContent = 'Nodo offline — avvia l\'app Freenet';
-    document.getElementById('ni-net').textContent   = 'Non raggiungibile';
+    document.getElementById('ni-net').textContent   = 'Non raggiungibile (prova 7509 o 8888)';
     document.getElementById('ni-peers').textContent = '0';
   }
 }
 checkNode();
 setInterval(checkNode, 15000);
+
+// ── archivio siti visitati (persistente) ──────────────────────────────────────
+function loadSiteArchive()  { try { return JSON.parse(localStorage.getItem('fn_site_archive')||'[]'); } catch { return []; } }
+function saveSiteArchive(a) { try { localStorage.setItem('fn_site_archive', JSON.stringify(a.slice(-500))); } catch {} }
+function archiveSite(url, title) {
+  if (!url || url === 'freenet://home') return;
+  const a = loadSiteArchive();
+  // evita duplicati consecutivi
+  if (a.length && a[a.length-1].url === url) return;
+  a.push({ url, title: title||url, time: new Date().toISOString() });
+  saveSiteArchive(a);
+}
 
 // ── navigation ────────────────────────────────────────────────────────────────
 let history_ = ['freenet://home'], histIdx = 0;
@@ -321,6 +346,7 @@ function navigate(url) {
   if (!url) return;
   document.getElementById('addr').value = url;
   histIdx++; history_.splice(histIdx); history_.push(url);
+  archiveSite(url, url);
   loadUrl(url);
 }
 function goBack()    { if (histIdx > 0) loadUrl(history_[--histIdx], true); }
@@ -338,11 +364,12 @@ function loadUrl(url, skipHist) {
     return;
   }
   // special: video page
-  if (url === 'freenet://video' || url.includes('video.html')) {
+  if (url === 'freenet://video' || url === 'video.html') {
     window.open('video.html', '_self'); return;
   }
-  // map route or use raw
-  const target = ROUTES[url] || (url.startsWith('http') ? url : NODE + '/' + url.replace('freenet://', ''));
+  // usa FN.resolveUrl per compatibilità nuovo/vecchio Freenet
+  const target = FN.resolveUrl(url) || url;
+  if (target === 'video.html') { window.open('video.html', '_self'); return; }
   home.style.display  = 'none';
   frame.style.display = 'block';
 
