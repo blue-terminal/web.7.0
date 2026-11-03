@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreenetTV — Video senza censura</title>
+<style>
+:root {
+  --bg:     #0d1b2a;
+  --bg2:    #112240;
+  --bg3:    #1a3358;
+  --accent: #0a84ff;
+  --red:    #e53935;
+  --green:  #00c896;
+  --text:   #e8edf4;
+  --text2:  #8fa8c8;
+  --border: #1e3a5f;
+  --r:      10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+/* ── TOPBAR ── */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 20px; background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+.logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text); flex-shrink: 0; }
+.logo-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--red); display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.logo-name { font-weight: 700; font-size: 16px; }
+.logo-name span { color: var(--red); }
+
+.search-wrap { flex: 1; display: flex; max-width: 600px; margin: 0 auto; }
+.search-wrap input {
+  flex: 1; padding: 9px 14px; background: var(--bg3); border: 1px solid var(--border);
+  border-right: none; border-radius: var(--r) 0 0 var(--r); color: var(--text);
+  font-size: 14px; outline: none;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-btn {
+  padding: 9px 16px; background: var(--bg3); border: 1px solid var(--border);
+  border-left: none; border-radius: 0 var(--r) var(--r) 0; color: var(--text2);
+  cursor: pointer; font-size: 15px;
+}
+.search-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.topbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-shrink: 0; }
+.btn-upload {
+  padding: 7px 14px; border-radius: 8px; background: transparent;
+  border: 1px solid var(--border); color: var(--text2); font-size: 13px; cursor: pointer;
+}
+.btn-upload:hover { border-color: var(--accent); color: var(--accent); }
+.btn-accedi {
+  padding: 7px 16px; border-radius: 8px; background: var(--accent);
+  border: none; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.btn-accedi:hover { opacity: .85; }
+.avatar-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--red), #ff6b6b);
+  border: none; color: #fff; font-weight: 700; font-size: 13px;
+  cursor: pointer; display: none; align-items: center; justify-content: center;
+}
+.user-menu {
+  position: absolute; top: 52px; right: 20px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 0; min-width: 180px;
+  box-shadow: 0 8px 24px #00000055; display: none; z-index: 200;
+}
+.user-menu.open { display: block; }
+.um-head { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.um-name { font-weight: 700; font-size: 14px; }
+.um-sub  { font-size: 11px; color: var(--text2); }
+.um-item { padding: 9px 14px; font-size: 13px; cursor: pointer; }
+.um-item:hover { background: var(--bg3); }
+.um-sep  { height: 1px; background: var(--border); margin: 4px 0; }
+.um-item.danger { color: #ff453a; }
+
+/* ── SIDEBAR ── */
+.layout { display: flex; }
+.sidebar {
+  width: 200px; flex-shrink: 0; padding: 14px 0;
+  border-right: 1px solid var(--border);
+  position: sticky; top: 57px; height: calc(100vh - 57px); overflow-y: auto;
+}
+.sb-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 18px; font-size: 13px; cursor: pointer; transition: .15s;
+  border-radius: 0 20px 20px 0; margin-right: 12px;
+}
+.sb-item:hover { background: var(--bg3); }
+.sb-item.active { background: var(--bg3); font-weight: 600; }
+.sb-item span:first-child { font-size: 18px; width: 24px; text-align: center; }
+.sb-sep { height: 1px; background: var(--border); margin: 8px 14px; }
+.sb-label { padding: 8px 18px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--text2); }
+
+/* ── MAIN ── */
+.main { flex: 1; padding: 20px; overflow-x: hidden; }
+
+/* category pills */
+.cats { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }
+.cat { padding: 6px 14px; border-radius: 20px; background: var(--bg3); border: 1px solid var(--border); font-size: 13px; cursor: pointer; white-space: nowrap; transition: .15s; }
+.cat:hover, .cat.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+/* video grid */
+.video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.video-card { cursor: pointer; transition: .15s; }
+.video-card:hover .thumb-wrap { transform: scale(1.02); }
+.thumb-wrap { position: relative; border-radius: var(--r); overflow: hidden; aspect-ratio: 16/9; background: var(--bg3); transition: .2s; }
+.thumb-img { width: 100%; height: 100%; object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 48px; background: var(--bg3); }
+.duration { position: absolute; bottom: 6px; right: 8px; background: #000b; color: #fff; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+.play-btn {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: .2s; background: #0006;
+}
+.video-card:hover .play-btn { opacity: 1; }
+.play-icon { width: 50px; height: 50px; border-radius: 50%; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.video-meta { padding: 10px 0 0; display: flex; gap: 10px; }
+.ch-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--green)); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+.video-info .v-title { font-size: 14px; font-weight: 600; line-height: 1.3; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.video-info .v-ch    { font-size: 12px; color: var(--text2); }
+.video-info .v-stats { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* live badge */
+.live-badge { background: var(--red); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; position: absolute; top: 8px; left: 8px; }
+
+/* upload panel */
+.upload-panel {
+  display: none; position: fixed; inset: 0; background: #000000aa;
+  backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 300;
+}
+.upload-panel.open { display: flex; }
+.upload-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 32px; width: 100%; max-width: 440px; position: relative; }
+.upload-box h2 { font-size: 18px; margin-bottom: 6px; }
+.upload-box p  { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+.drop-area {
+  border: 2px dashed var(--border); border-radius: var(--r); padding: 40px;
+  text-align: center; color: var(--text2); cursor: pointer; transition: .2s;
+  margin-bottom: 16px;
+}
+.drop-area:hover { border-color: var(--accent); color: var(--accent); }
+.upload-close { position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 20px; color: var(--text2); cursor: pointer; }
+
+/* modal login (stesso di index) */
+.modal-overlay { position: fixed; inset: 0; background: #00000088; backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 999; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 36px 40px; width: 100%; max-width: 390px; text-align: center; position: relative; animation: pop .2s ease; }
+@keyframes pop { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-logo { width: 48px; height: 48px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; color: #fff; margin: 0 auto 12px; }
+.modal h2 { font-size: 19px; margin-bottom: 4px; }
+.modal p  { font-size: 13px; color: var(--text2); margin-bottom: 22px; }
+.field { margin-bottom: 13px; text-align: left; }
+.field label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 4px; }
+.field input { width: 100%; padding: 11px 13px; border-radius: var(--r); background: var(--bg3); border: 1px solid var(--border); color: var(--text); font-size: 14px; outline: none; transition: border .2s; }
+.field input:focus { border-color: var(--red); }
+.field .err { font-size: 12px; color: #ff453a; margin-top: 4px; display: none; }
+.btn-submit { width: 100%; padding: 12px; border-radius: var(--r); background: var(--red); border: none; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 4px; }
+.btn-submit:hover { opacity: .88; }
+.modal-footer { font-size: 12px; color: var(--text2); margin-top: 16px; }
+.modal-footer a { color: var(--red); cursor: pointer; }
+.modal-close { position: absolute; top: 12px; right: 14px; font-size: 20px; background: none; border: none; color: var(--text2); cursor: pointer; }
+
+/* player overlay */
+.player-overlay { display: none; position: fixed; inset: 0; background: #000000cc; backdrop-filter: blur(6px); align-items: center; justify-content: center; z-index: 400; }
+.player-overlay.open { display: flex; }
+.player-box { background: var(--bg2); border-radius: 16px; overflow: hidden; width: 100%; max-width: 800px; position: relative; }
+.player-screen { background: #000; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; font-size: 80px; cursor: pointer; position: relative; }
+.player-controls { padding: 14px 18px; }
+.p-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.p-ch    { font-size: 12px; color: var(--text2); }
+.p-bar   { height: 4px; background: var(--bg3); border-radius: 2px; margin: 10px 0; cursor: pointer; }
+.p-prog  { height: 4px; background: var(--red); border-radius: 2px; width: 0%; transition: width .3s; }
+.p-btns  { display: flex; align-items: center; gap: 12px; }
+.p-btn   { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; }
+.p-btn:hover { color: var(--text); }
+.p-time  { font-size: 12px; color: var(--text2); margin-left: 4px; }
+.player-close { position: absolute; top: 10px; right: 12px; background: #0008; border: none; color: #fff; font-size: 20px; cursor: pointer; border-radius: 50%; width: 30px; height: 30px; }
+/* like/comment row */
+.p-interact { display: flex; align-items: center; gap: 10px; padding: 10px 0 6px; border-top: 1px solid var(--border); margin-top: 8px; flex-wrap: wrap; }
+.like-btn { display: flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 20px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); font-size: 13px; cursor: pointer; transition: .15s; }
+.like-btn:hover, .like-btn.liked { background: var(--red); border-color: var(--red); color: #fff; }
+.dislike-btn { padding: 6px 14px; border-radius: 20px; background: var(--bg3); border: 1px solid var(--border); color: var(--text2); font-size: 13px; cursor: pointer; }
+.dislike-btn:hover { border-color: var(--border); color: var(--text); }
+.share-btn { padding: 6px 14px; border-radius: 20px; background: var(--bg3); border: 1px solid var(--border); color: var(--text2); font-size: 13px; cursor: pointer; }
+.share-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* comments */
+.comments { padding: 12px 0 0; max-height: 220px; overflow-y: auto; }
+.comment-input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.comment-input-row input { flex: 1; padding: 8px 12px; border-radius: 8px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); font-size: 13px; outline: none; }
+.comment-input-row input:focus { border-color: var(--red); }
+.comment-input-row button { padding: 8px 14px; border-radius: 8px; background: var(--red); border: none; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+.cmt { display: flex; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.cmt-av { width: 28px; height: 28px; border-radius: 50%; background: var(--bg3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; }
+.cmt-body .cmt-name { font-size: 12px; font-weight: 700; color: var(--accent); }
+.cmt-body .cmt-text { font-size: 13px; margin-top: 2px; }
+.cmt-body .cmt-time { font-size: 11px; color: var(--text2); margin-top: 3px; }
+
+@media (max-width: 640px) {
+  .sidebar { display: none; }
+  .cats { gap: 6px; }
+  .video-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+}
+@media (max-width: 400px) {
+  .video-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ TOPBAR ═══ -->
+<div class="topbar">
+  <a class="logo" href="index.html">
+    <div class="logo-icon">▶</div>
+    <div class="logo-name">Freenet<span>TV</span></div>
+  </a>
+
+  <div class="search-wrap">
+    <input id="s-inp" type="text" placeholder="Cerca video su Freenet…" onkeydown="if(event.key==='Enter')doSearch()">
+    <button class="search-btn" onclick="doSearch()">🔍</button>
+  </div>
+
+  <div class="topbar-right" style="position:relative">
+    <button class="btn-upload" onclick="openUpload()">+ Carica</button>
+    <button class="btn-accedi" id="btn-accedi" onclick="openLogin()">Accedi</button>
+    <button class="avatar-btn" id="btn-avatar" onclick="toggleUM()"></button>
+    <div class="user-menu" id="user-menu">
+      <div class="um-head">
+        <div class="um-name" id="um-name">—</div>
+        <div class="um-sub">FreenetTV</div>
+      </div>
+      <div class="um-item">📺 I miei video</div>
+      <div class="um-item">👍 Video piaciuti</div>
+      <div class="um-sep"></div>
+      <div class="um-item danger" onclick="doLogout()">⏻ Esci</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ LAYOUT ═══ -->
+<div class="layout">
+
+  <!-- sidebar -->
+  <div class="sidebar">
+    <div class="sb-item active" onclick="filterCat('home')"><span>🏠</span><span>Home</span></div>
+    <div class="sb-item" onclick="filterCat('trend')"><span>🔥</span><span>Trending</span></div>
+    <div class="sb-item" onclick="filterCat('live')"><span>🔴</span><span>Live</span></div>
+    <div class="sb-item" onclick="filterCat('musica')"><span>🎵</span><span>Musica</span></div>
+    <div class="sb-sep"></div>
+    <div class="sb-label">Canali</div>
+    <div class="sb-item" onclick="openLogin()"><span>➕</span><span>Iscriviti</span></div>
+    <div class="sb-sep"></div>
+    <div class="sb-item" onclick="goIndex()"><span>🌐</span><span>Browser</span></div>
+    <div class="sb-item"><span>⚙️</span><span>Impostazioni</span></div>
+  </div>
+
+  <!-- main -->
+  <div class="main">
+    <div class="cats" id="cats">
+      <div class="cat active" onclick="filterCat('tutti',this)">Tutti</div>
+      <div class="cat" onclick="filterCat('tech',this)">Tecnologia</div>
+      <div class="cat" onclick="filterCat('privacy',this)">Privacy</div>
+      <div class="cat" onclick="filterCat('musica',this)">Musica</div>
+      <div class="cat" onclick="filterCat('documentari',this)">Documentari</div>
+      <div class="cat" onclick="filterCat('news',this)">Notizie libere</div>
+      <div class="cat" onclick="filterCat('gaming',this)">Gaming</div>
+      <div class="cat" onclick="filterCat('arte',this)">Arte</div>
+    </div>
+
+    <div class="video-grid" id="video-grid"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ PLAYER ═══ -->
+<div class="player-overlay" id="player-overlay" onclick="closePlayer(event)">
+  <div class="player-box" onclick="e=>e.stopPropagation()">
+    <button class="player-close" onclick="closePlayer()">✕</button>
+    <div class="player-screen" id="player-screen" onclick="togglePlay()">
+      <span id="player-emoji">▶️</span>
+    </div>
+    <div class="player-controls">
+      <div class="p-title" id="p-title">—</div>
+      <div class="p-ch"    id="p-ch">—</div>
+      <div class="p-bar" onclick="seekBar(event)"><div class="p-prog" id="p-prog"></div></div>
+      <div class="p-btns">
+        <button class="p-btn" onclick="togglePlay()" id="p-play-btn">⏸</button>
+        <button class="p-btn">⏭</button>
+        <button class="p-btn">🔊</button>
+        <span class="p-time" id="p-time">0:00 / 0:00</span>
+        <button class="p-btn" style="margin-left:auto">⛶</button>
+      </div>
+      <!-- like / share row -->
+      <div class="p-interact">
+        <button class="like-btn" id="p-like-btn" onclick="toggleLike()">👍 <span id="p-like-count">0</span></button>
+        <button class="dislike-btn" onclick="toggleDislike()" id="p-dislike-btn">👎</button>
+        <button class="share-btn" onclick="shareVideo()">↗ Condividi</button>
+        <span style="margin-left:auto;font-size:12px;color:var(--text2)" id="p-views-txt"></span>
+      </div>
+      <!-- comments -->
+      <div class="comments" id="p-comments">
+        <div class="comment-input-row">
+          <input id="cmt-input" type="text" placeholder="Aggiungi un commento…" onkeydown="if(event.key==='Enter')postComment()">
+          <button onclick="postComment()">Invia</button>
+        </div>
+        <div id="cmt-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ UPLOAD ═══ -->
+<div class="upload-panel" id="upload-panel" onclick="closeUpload(event)">
+  <div class="upload-box">
+    <button class="upload-close" onclick="closeUpload()">✕</button>
+    <h2>Carica su FreenetTV</h2>
+    <p>I tuoi video sono distribuiti sulla rete Freenet — nessun server centrale, nessuna censura.</p>
+    <div class="drop-area" onclick="requireLogin()">
+      <div style="font-size:40px;margin-bottom:10px">📤</div>
+      <div style="font-size:14px;font-weight:600">Trascina il video qui</div>
+      <div style="font-size:12px;margin-top:6px">MP4, MKV, WebM — max 2 GB</div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);text-align:center">Devi essere connesso per caricare</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ MODAL LOGIN ═══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+
+    <div id="modal-login">
+      <div class="modal-logo">▶</div>
+      <h2>Accedi a FreenetTV</h2>
+      <p>Solo nome utente e password — nessuna email</p>
+      <div class="field">
+        <label>Nome utente</label>
+        <input id="l-name" type="text" placeholder="il_tuo_nome">
+        <div class="err" id="l-err-name">Nome non trovato — <a onclick="showRegister()">Registrati</a></div>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="l-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+        <div class="err" id="l-err-pass">Password errata</div>
+      </div>
+      <button class="btn-submit" onclick="doLogin()">Accedi</button>
+      <div class="modal-footer">Non hai un account? <a onclick="showRegister()">Registrati</a></div>
+    </div>
+
+    <div id="modal-register" style="display:none">
+      <div class="modal-logo">▶</div>
+      <h2>Crea account</h2>
+      <p>Gratis · Anonimo · Nessuna email richiesta</p>
+      <div class="field">
+        <label>Nome utente</label>
+        <input id="r-name" type="text" placeholder="scegli_un_nome">
+        <div class="err" id="r-err-name">Nome già in uso</div>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="r-pass" type="password" placeholder="min. 6 caratteri">
+        <div class="err" id="r-err-pass">Troppo corta (min. 6 caratteri)</div>
+      </div>
+      <div class="field">
+        <label>Conferma password</label>
+        <input id="r-pass2" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doRegister()">
+        <div class="err" id="r-err-pass2">Le password non coincidono</div>
+      </div>
+      <button class="btn-submit" onclick="doRegister()">Crea account</button>
+      <div class="modal-footer">Hai già un account? <a onclick="showLogin()">Accedi</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── video data ────────────────────────────────────────────────────────────────
+const VIDEOS = [
+  { id:1,  emoji:'🔐', title:'Come funziona la cifratura end-to-end', ch:'PrivacyLab',    views:'48K', ago:'3 giorni fa',  dur:'18:24', cat:'privacy',     live:false },
+  { id:2,  emoji:'🌐', title:'Freenet 0.2 — la nuova rete decentralizzata', ch:'FreenetTV', views:'132K',ago:'1 settimana',dur:'24:10', cat:'tech',        live:false },
+  { id:3,  emoji:'🎵', title:'Mixtape 2026 — musica libera da copyright', ch:'FreeBeats',  views:'21K', ago:'2 giorni fa',  dur:'42:00', cat:'musica',      live:false },
+  { id:4,  emoji:'🔴', title:'LIVE: Dibattito libertà di internet',     ch:'OpenWeb',     views:'5.2K',ago:'In diretta',   dur:'LIVE',  cat:'news',        live:true  },
+  { id:5,  emoji:'🎮', title:'Minecraft offline su rete Freenet',       ch:'GameNode',    views:'9K',  ago:'5 giorni fa',  dur:'31:45', cat:'gaming',      live:false },
+  { id:6,  emoji:'📜', title:'Censura online: il documentario proibito',ch:'FreeDocs',    views:'89K', ago:'2 settimane',  dur:'1:12:00',cat:'documentari',live:false },
+  { id:7,  emoji:'🖼',  title:'Arte generativa su blockchain Freenet',   ch:'ArtNode',     views:'7K',  ago:'1 giorno fa',  dur:'14:50', cat:'arte',        live:false },
+  { id:8,  emoji:'🔒', title:'VPN vs Freenet — differenze reali',       ch:'CyberFreenet',views:'63K', ago:'4 giorni fa',  dur:'22:33', cat:'privacy',     live:false },
+  { id:9,  emoji:'🎸', title:'Concerto punk — no DRM, no censura',      ch:'FreeBand',    views:'15K', ago:'1 settimana',  dur:'55:12', cat:'musica',      live:false },
+  { id:10, emoji:'🤖', title:'AI decentralizzata — modelli liberi',      ch:'FreeAI',      views:'44K', ago:'3 giorni fa',  dur:'28:07', cat:'tech',        live:false },
+  { id:11, emoji:'📰', title:'Notizie censurate — la settimana in rete', ch:'FreeNews',    views:'38K', ago:'Ieri',         dur:'19:45', cat:'news',        live:false },
+  { id:12, emoji:'🎨', title:'Graffiti digitali — street art su Freenet',ch:'UrbanNode',  views:'4K',  ago:'6 giorni fa',  dur:'9:30',  cat:'arte',        live:false },
+];
+
+let currentCat = 'tutti';
+let playInterval = null;
+let playProgress = 0;
+let isPlaying = false;
+let currentVideoId = null;
+
+// ── likes / comments storage ─────────────────────────────────────────────────
+function getVideoData() { try { return JSON.parse(localStorage.getItem('fn_video_data')||'{}'); } catch { return {}; } }
+function saveVideoData(d) { try { localStorage.setItem('fn_video_data', JSON.stringify(d)); } catch {} }
+function getVD(id) { const d=getVideoData(); if(!d[id]) d[id]={likes:0,dislikes:0,comments:[],liked:false,disliked:false}; return d[id]; }
+function saveVD(id, vd) { const d=getVideoData(); d[id]=vd; saveVideoData(d); }
+
+// ── render ────────────────────────────────────────────────────────────────────
+function renderGrid(videos) {
+  document.getElementById('video-grid').innerHTML = videos.map(v => `
+    <div class="video-card" onclick="openPlayer(${v.id})">
+      <div class="thumb-wrap">
+        <div class="thumb-img">${v.emoji}</div>
+        ${v.live ? '<span class="live-badge">🔴 LIVE</span>' : `<span class="duration">${v.dur}</span>`}
+        <div class="play-btn"><div class="play-icon">▶</div></div>
+      </div>
+      <div class="video-meta">
+        <div class="ch-avatar">${v.ch[0]}</div>
+        <div class="video-info">
+          <div class="v-title">${v.title}</div>
+          <div class="v-ch">${v.ch}</div>
+          <div class="v-stats">${v.views} visualizzazioni · ${v.ago}</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+renderGrid(VIDEOS);
+
+// ── filter ────────────────────────────────────────────────────────────────────
+function filterCat(cat, el) {
+  currentCat = cat;
+  document.querySelectorAll('.cat').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const filtered = cat === 'tutti' || cat === 'home' || cat === 'trend'
+    ? VIDEOS
+    : VIDEOS.filter(v => v.cat === cat || (cat === 'live' && v.live));
+  renderGrid(filtered);
+}
+
+function doSearch() {
+  const q = document.getElementById('s-inp').value.toLowerCase().trim();
+  if (!q) { renderGrid(VIDEOS); return; }
+  renderGrid(VIDEOS.filter(v => v.title.toLowerCase().includes(q) || v.ch.toLowerCase().includes(q)));
+}
+
+// ── player ────────────────────────────────────────────────────────────────────
+function openPlayer(id) {
+  const v = VIDEOS.find(x => x.id === id);
+  if (!v) return;
+  currentVideoId = id;
+  document.getElementById('p-title').textContent = v.title;
+  document.getElementById('p-ch').textContent    = v.ch;
+  document.getElementById('player-emoji').textContent = v.emoji;
+  document.getElementById('player-overlay').classList.add('open');
+  playProgress = 0;
+  isPlaying = true;
+  document.getElementById('p-play-btn').textContent = '⏸';
+  startProgress();
+  renderInteract(id, v);
+  renderComments(id);
+}
+
+function renderInteract(id, v) {
+  const vd = getVD(id);
+  const lb = document.getElementById('p-like-btn');
+  lb.className = 'like-btn' + (vd.liked ? ' liked' : '');
+  document.getElementById('p-like-count').textContent = vd.likes;
+  document.getElementById('p-dislike-btn').style.color = vd.disliked ? 'var(--red)' : '';
+  document.getElementById('p-views-txt').textContent = v.views + ' visualizzazioni';
+}
+
+function toggleLike() {
+  if (!currentVideoId) return;
+  const vd = getVD(currentVideoId);
+  if (vd.liked) { vd.likes--; vd.liked=false; } else { vd.likes++; vd.liked=true; if(vd.disliked){vd.disliked=false;} }
+  saveVD(currentVideoId, vd);
+  const v = VIDEOS.find(x=>x.id===currentVideoId);
+  renderInteract(currentVideoId, v);
+}
+function toggleDislike() {
+  if (!currentVideoId) return;
+  const vd = getVD(currentVideoId);
+  vd.disliked = !vd.disliked;
+  if (vd.disliked && vd.liked) { vd.liked=false; vd.likes=Math.max(0,vd.likes-1); }
+  saveVD(currentVideoId, vd);
+  const v = VIDEOS.find(x=>x.id===currentVideoId);
+  renderInteract(currentVideoId, v);
+}
+function shareVideo() {
+  const v = VIDEOS.find(x=>x.id===currentVideoId);
+  const key = 'USK@video-' + (currentVideoId||'0') + ',AAAA/0';
+  prompt('Chiave Freenet del video (condividi questa):', key);
+}
+
+function renderComments(id) {
+  const vd = getVD(id);
+  const list = document.getElementById('cmt-list');
+  if (!vd.comments.length) { list.innerHTML = '<div style="font-size:13px;color:var(--text2);padding:8px 0">Nessun commento — sii il primo!</div>'; return; }
+  list.innerHTML = vd.comments.slice().reverse().map(c => `
+    <div class="cmt">
+      <div class="cmt-av" style="background:hsl(${c.name.charCodeAt(0)*7},40%,30%)">${c.name[0].toUpperCase()}</div>
+      <div class="cmt-body">
+        <div class="cmt-name">${c.name}</div>
+        <div class="cmt-text">${c.text}</div>
+        <div class="cmt-time">${c.time}</div>
+      </div>
+    </div>`).join('');
+}
+
+function postComment() {
+  const u = getCurrentUser();
+  if (!u) { openLogin(); return; }
+  const inp = document.getElementById('cmt-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  const vd = getVD(currentVideoId);
+  vd.comments.push({ name: u, text, time: new Date().toLocaleString('it') });
+  saveVD(currentVideoId, vd);
+  inp.value = '';
+  renderComments(currentVideoId);
+}
+
+function closePlayer(e) {
+  if (e && e.target !== document.getElementById('player-overlay')) return;
+  if (!e) { document.getElementById('player-overlay').classList.remove('open'); stopProgress(); }
+  else    { document.getElementById('player-overlay').classList.remove('open'); stopProgress(); }
+}
+
+function togglePlay() {
+  isPlaying = !isPlaying;
+  document.getElementById('p-play-btn').textContent = isPlaying ? '⏸' : '▶';
+  isPlaying ? startProgress() : stopProgress();
+}
+
+function startProgress() {
+  stopProgress();
+  playInterval = setInterval(() => {
+    playProgress = Math.min(playProgress + .3, 100);
+    document.getElementById('p-prog').style.width = playProgress + '%';
+    const tot = 1320; const cur = Math.floor(tot * playProgress / 100);
+    document.getElementById('p-time').textContent = fmt(cur) + ' / ' + fmt(tot);
+    if (playProgress >= 100) stopProgress();
+  }, 300);
+}
+function stopProgress() { clearInterval(playInterval); }
+function seekBar(e) {
+  const bar = e.currentTarget;
+  playProgress = (e.offsetX / bar.offsetWidth) * 100;
+  document.getElementById('p-prog').style.width = playProgress + '%';
+}
+function fmt(s) { return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
+
+// ── upload ────────────────────────────────────────────────────────────────────
+function openUpload()       { document.getElementById('upload-panel').classList.add('open'); }
+function closeUpload(e)     { if (!e || e.target===document.getElementById('upload-panel')) document.getElementById('upload-panel').classList.remove('open'); }
+function requireLogin()     { closeUpload(); if (!getCurrentUser()) openLogin(); else alert('Seleziona un file video'); }
+
+// ── auth ──────────────────────────────────────────────────────────────────────
+function getAccounts() { try { return JSON.parse(localStorage.getItem('fn_accounts')||'{}'); } catch { return {}; } }
+function saveAccounts(a) { try { localStorage.setItem('fn_accounts', JSON.stringify(a)); } catch {} }
+function getCurrentUser()  { try { return localStorage.getItem('fn_current')||null; } catch { return null; } }
+function setCurrentUser(u) { try { localStorage.setItem('fn_current', u||''); } catch {} }
+
+(function init() { const u = getCurrentUser(); if (u) applyLogin(u); })();
+
+function openLogin()   { document.getElementById('modal-overlay').classList.add('open'); showLogin(); }
+function closeModal(e) { if (!e||e.target===document.getElementById('modal-overlay')) document.getElementById('modal-overlay').classList.remove('open'); }
+function showLogin()   { document.getElementById('modal-login').style.display='block'; document.getElementById('modal-register').style.display='none'; clearErr(); }
+function showRegister(){ document.getElementById('modal-login').style.display='none'; document.getElementById('modal-register').style.display='block'; clearErr(); }
+function clearErr()    { document.querySelectorAll('.err').forEach(e=>e.style.display='none'); }
+function errShow(id)   { document.getElementById(id).style.display='block'; }
+
+function doLogin() {
+  clearErr();
+  const name = document.getElementById('l-name').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  if (!name) { errShow('l-err-name'); return; }
+  const acc = getAccounts();
+  if (!acc[name]) { errShow('l-err-name'); return; }
+  if (acc[name] !== btoa(pass)) { errShow('l-err-pass'); return; }
+  setCurrentUser(name); applyLogin(name); closeModal();
+}
+function doRegister() {
+  clearErr();
+  const name  = document.getElementById('r-name').value.trim();
+  const pass  = document.getElementById('r-pass').value;
+  const pass2 = document.getElementById('r-pass2').value;
+  const acc = getAccounts();
+  let ok = true;
+  if (!name || acc[name]) { errShow('r-err-name'); ok=false; }
+  if (pass.length < 6)    { errShow('r-err-pass'); ok=false; }
+  if (pass !== pass2)     { errShow('r-err-pass2'); ok=false; }
+  if (!ok) return;
+  acc[name] = btoa(pass); saveAccounts(acc);
+  setCurrentUser(name); applyLogin(name); closeModal();
+}
+function applyLogin(name) {
+  document.getElementById('btn-accedi').style.display='none';
+  const av = document.getElementById('btn-avatar');
+  av.style.display='flex'; av.textContent=name[0].toUpperCase();
+  document.getElementById('um-name').textContent=name;
+}
+function doLogout() {
+  setCurrentUser(null);
+  document.getElementById('btn-accedi').style.display='flex';
+  document.getElementById('btn-avatar').style.display='none';
+  toggleUM(false);
+}
+function toggleUM(force) {
+  const m=document.getElementById('user-menu');
+  m.classList.toggle('open', force!==undefined?force:!m.classList.contains('open'));
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('#btn-avatar')&&!e.target.closest('#user-menu')) document.getElementById('user-menu').classList.remove('open'); });
+
+function goIndex() { window.location.href='index.html'; }
+</script>
+</body>
+</html>

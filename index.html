@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freenet Browser</title>
+<style>
+:root {
+  --bg:     #0d1b2a;
+  --bg2:    #112240;
+  --bg3:    #1a3358;
+  --accent: #0a84ff;
+  --green:  #00c896;
+  --danger: #ff453a;
+  --warn:   #ff9f0a;
+  --text:   #e8edf4;
+  --text2:  #8fa8c8;
+  --border: #1e3a5f;
+  --r:      10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; background: var(--bg2);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.nav-btns { display: flex; gap: 4px; }
+.nav-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--bg3); border: none; color: var(--text2);
+  font-size: 15px; cursor: pointer; transition: .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-btn:hover { background: var(--accent); color: #fff; }
+
+.addr-bar {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 22px; padding: 0 14px; height: 36px; transition: border .2s;
+}
+.addr-bar:focus-within { border-color: var(--accent); }
+.addr-lock { color: var(--green); font-size: 13px; }
+.addr-input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text); font-size: 13px;
+}
+.addr-go {
+  background: var(--accent); border: none; color: #fff;
+  padding: 4px 10px; border-radius: 14px; font-size: 12px;
+  cursor: pointer; font-weight: 600;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.btn-accedi {
+  padding: 7px 18px; border-radius: 8px;
+  background: var(--accent); border: none; color: #fff;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: .15s;
+  white-space: nowrap;
+}
+.btn-accedi:hover { opacity: .85; }
+.avatar-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--green));
+  border: none; color: #fff; font-weight: 700; font-size: 13px;
+  cursor: pointer; display: none; align-items: center; justify-content: center;
+}
+
+/* ── FRAME / BROWSER CONTENT ── */
+.browser-body { flex: 1; overflow-y: auto; background: var(--bg); position: relative; }
+
+/* home page Freenet */
+.freenet-home {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 60px 20px 40px;
+}
+.fn-logo {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: linear-gradient(135deg, #0a84ff, #00c896);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; font-weight: 900; color: #fff;
+  box-shadow: 0 0 50px #0a84ff44; margin-bottom: 18px;
+}
+.fn-title { font-size: 32px; font-weight: 700; margin-bottom: 6px; }
+.fn-sub   { color: var(--text2); font-size: 14px; margin-bottom: 36px; }
+
+.search-box {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 28px; padding: 0 18px; height: 50px;
+  width: 100%; max-width: 580px; margin-bottom: 32px; transition: border .2s;
+}
+.search-box:focus-within { border-color: var(--accent); }
+.search-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 15px; }
+.search-btn { background: var(--accent); border: none; color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+.quick-links { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-bottom: 40px; }
+.quick-link {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 16px 20px; border-radius: var(--r);
+  background: var(--bg2); border: 1px solid var(--border);
+  cursor: pointer; transition: .2s; text-decoration: none; color: var(--text);
+  min-width: 90px;
+}
+.quick-link:hover { border-color: var(--accent); background: var(--bg3); }
+.quick-link span:first-child { font-size: 26px; }
+.quick-link span:last-child  { font-size: 12px; color: var(--text2); }
+
+/* node status bar */
+.node-bar {
+  display: flex; align-items: center; gap: 16px; padding: 10px 20px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); width: 100%; max-width: 700px;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.node-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); flex-shrink: 0; }
+.node-info { font-size: 13px; color: var(--text2); }
+.node-info strong { color: var(--text); }
+.node-bar a { font-size: 12px; color: var(--accent); cursor: pointer; margin-left: auto; }
+
+/* ── MODAL LOGIN ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: #00000088; backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center; z-index: 999;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 36px 40px;
+  width: 100%; max-width: 400px; text-align: center;
+  animation: pop .2s ease;
+}
+@keyframes pop { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-logo {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--green));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 900; color: #fff; margin: 0 auto 14px;
+}
+.modal h2 { font-size: 20px; margin-bottom: 4px; }
+.modal p  { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
+.field { margin-bottom: 14px; text-align: left; }
+.field label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 5px; }
+.field input {
+  width: 100%; padding: 12px 14px; border-radius: var(--r);
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); font-size: 14px; outline: none; transition: border .2s;
+}
+.field input:focus { border-color: var(--accent); }
+.field .err { font-size: 12px; color: var(--danger); margin-top: 5px; display: none; }
+.btn-submit {
+  width: 100%; padding: 13px; border-radius: var(--r);
+  background: var(--accent); border: none; color: #fff;
+  font-size: 15px; font-weight: 700; cursor: pointer; transition: .15s;
+  margin-top: 6px;
+}
+.btn-submit:hover { opacity: .88; }
+.modal-footer { font-size: 12px; color: var(--text2); margin-top: 18px; }
+.modal-footer a { color: var(--accent); cursor: pointer; }
+.modal-close {
+  position: absolute; top: 14px; right: 16px; font-size: 20px;
+  background: none; border: none; color: var(--text2); cursor: pointer;
+}
+
+/* ── REGISTER ── */
+#modal-register { display: none; }
+#modal-login    { display: block; }
+
+/* ── USER MENU ── */
+.user-menu {
+  position: absolute; top: 48px; right: 0;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 0; min-width: 200px;
+  box-shadow: 0 8px 24px #00000055; display: none; z-index: 200;
+}
+.user-menu.open { display: block; }
+.user-menu-header { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.user-menu-name { font-weight: 700; }
+.user-menu-role { font-size: 12px; color: var(--text2); }
+.user-menu-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; font-size: 14px; cursor: pointer; transition: .15s;
+}
+.user-menu-item:hover { background: var(--bg3); }
+.user-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
+.user-menu-item.danger { color: var(--danger); }
+
+/* ── ANTI-SPAM PANEL (accessibile dalla home quando loggato) ── */
+.panel {
+  display: none; position: fixed; right: 0; top: 55px; bottom: 0; width: 380px;
+  background: var(--bg2); border-left: 1px solid var(--border);
+  flex-direction: column; z-index: 150; overflow-y: auto;
+}
+.panel.open { display: flex; flex-direction: column; }
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.panel-title { font-weight: 700; font-size: 15px; }
+.panel-close { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; }
+.panel-body { padding: 14px; flex: 1; overflow-y: auto; }
+
+.spam-row {
+  background: var(--bg3); border-radius: 8px; padding: 10px 12px;
+  margin-bottom: 8px; font-size: 12px;
+}
+.spam-mac { font-family: monospace; color: var(--accent); font-size: 11px; }
+.spam-rpm { color: var(--danger); font-weight: 700; }
+.spam-acts { display: flex; gap: 6px; margin-top: 6px; }
+.btn-sm { padding: 4px 10px; border-radius: 6px; border: none; font-size: 11px; font-weight: 600; cursor: pointer; }
+.btn-sm-danger  { background: var(--danger); color: #fff; }
+.btn-sm-neutral { background: var(--bg); border: 1px solid var(--border); color: var(--text2); }
+
+/* ── STATUS BAR ── */
+.statusbar {
+  display: flex; align-items: center; gap: 14px; padding: 4px 14px;
+  background: var(--bg2); border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--text2); flex-shrink: 0;
+}
+.statusbar .dot-ok { color: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════ TOPBAR ═══ -->
+<div class="topbar">
+  <div class="nav-btns">
+    <button class="nav-btn" title="Indietro">‹</button>
+    <button class="nav-btn" title="Avanti">›</button>
+    <button class="nav-btn" title="Ricarica" onclick="reloadPage()">↺</button>
+  </div>
+
+  <div class="addr-bar">
+    <span class="addr-lock">🔒</span>
+    <input class="addr-input" id="addr-input" value="freenet://home" placeholder="freenet://..." onkeydown="if(event.key==='Enter')navigate()">
+    <button class="addr-go" onclick="navigate()">Vai</button>
+  </div>
+
+  <div class="topbar-right" style="position:relative">
+    <button class="btn-accedi" id="btn-accedi" onclick="openLogin()">Accedi</button>
+    <button class="avatar-btn" id="btn-avatar" onclick="toggleUserMenu()"></button>
+    <div class="user-menu" id="user-menu">
+      <div class="user-menu-header">
+        <div class="user-menu-name" id="menu-name">—</div>
+        <div class="user-menu-role">Utente Freenet</div>
+      </div>
+      <div class="user-menu-item" onclick="openPanel('antispam')">🛡 Anti-Spam</div>
+      <div class="user-menu-item" onclick="openPanel('scanner')">🔍 Scanner</div>
+      <div class="user-menu-sep"></div>
+      <div class="user-menu-item danger" onclick="doLogout()">⏻ Esci</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ BROWSER BODY ═══ -->
+<div class="browser-body" id="browser-body">
+  <div class="freenet-home">
+    <div class="fn-logo">F</div>
+    <div class="fn-title">Freenet</div>
+    <div class="fn-sub">Rete decentralizzata · Privata · Censurarésistente</div>
+
+    <div class="search-box">
+      <input class="search-input" id="search-input" placeholder="Cerca su Freenet o inserisci un indirizzo USK://…" onkeydown="if(event.key==='Enter')doSearch()">
+      <button class="search-btn" onclick="doSearch()">Cerca</button>
+    </div>
+
+    <div class="node-bar" id="node-bar">
+      <div class="node-dot"></div>
+      <div class="node-info">Nodo <strong>attivo</strong> · 14 peer · v0.2.154</div>
+      <div class="node-info">↑ 128 KB/s &nbsp; ↓ 340 KB/s</div>
+      <a onclick="openPanel('antispam')">🛡 Anti-Spam</a>
+    </div>
+
+    <div class="quick-links">
+      <a class="quick-link" onclick="goTo('freenet://siti')"><span>🌐</span><span>Siti Freenet</span></a>
+      <a class="quick-link" href="video.html"><span>▶️</span><span>FreenetTV</span></a>
+      <a class="quick-link" onclick="goTo('freenet://river')"><span>💬</span><span>River Chat</span></a>
+      <a class="quick-link" onclick="goTo('freenet://file')"><span>📁</span><span>File</span></a>
+      <a class="quick-link" onclick="goTo('freenet://editor')"><span>✏️</span><span>Editor siti</span></a>
+      <a class="quick-link" onclick="goTo('freenet://impostazioni')"><span>⚙️</span><span>Impostazioni</span></a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ STATUSBAR ═══ -->
+<div class="statusbar">
+  <span class="dot-ok">●</span>
+  <span>Freenet Browser · Web 7.0</span>
+  <span id="sb-user" style="margin-left:auto">Non connesso</span>
+</div>
+
+<!-- ═══════════════════════════════════════════════ MODAL LOGIN ═══ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" style="position:relative">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+
+    <!-- LOGIN -->
+    <div id="modal-login">
+      <div class="modal-logo">F</div>
+      <h2>Accedi a Freenet</h2>
+      <p>Inserisci le tue credenziali</p>
+      <div class="field">
+        <label>Nome utente</label>
+        <input id="l-name" type="text" placeholder="il_tuo_nome" autocomplete="username">
+        <div class="err" id="l-err-name">Nome non trovato — prova a registrarti</div>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+        <div class="err" id="l-err-pass">Password errata</div>
+      </div>
+      <button class="btn-submit" onclick="doLogin()">Accedi</button>
+      <div class="modal-footer">Non hai un account? <a onclick="showRegister()">Registrati</a></div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="modal-register">
+      <div class="modal-logo">F</div>
+      <h2>Crea account</h2>
+      <p>Scegli un nome e una password</p>
+      <div class="field">
+        <label>Nome utente</label>
+        <input id="r-name" type="text" placeholder="il_tuo_nome" autocomplete="username">
+        <div class="err" id="r-err-name">Nome già in uso</div>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="r-pass" type="password" placeholder="min. 6 caratteri" autocomplete="new-password">
+        <div class="err" id="r-err-pass">Password troppo corta (min. 6 caratteri)</div>
+      </div>
+      <div class="field">
+        <label>Conferma password</label>
+        <input id="r-pass2" type="password" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()">
+        <div class="err" id="r-err-pass2">Le password non coincidono</div>
+      </div>
+      <button class="btn-submit" onclick="doRegister()">Registrati</button>
+      <div class="modal-footer">Hai già un account? <a onclick="showLogin()">Accedi</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ PANEL ANTI-SPAM ═══ -->
+<div class="panel" id="panel-antispam">
+  <div class="panel-header">
+    <div class="panel-title">🛡 Anti-Spam MAC</div>
+    <button class="panel-close" onclick="closePanel('antispam')">✕</button>
+  </div>
+  <div class="panel-body" id="panel-antispam-body"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ PANEL SCANNER ═══ -->
+<div class="panel" id="panel-scanner">
+  <div class="panel-header">
+    <div class="panel-title">🔍 Scanner Richieste</div>
+    <button class="panel-close" onclick="closePanel('scanner')">✕</button>
+  </div>
+  <div class="panel-body" id="panel-scanner-body"></div>
+</div>
+
+<script>
+// ── account store (localStorage) ─────────────────────────────────────────────
+function getAccounts() {
+  try { return JSON.parse(localStorage.getItem('fn_accounts') || '{}'); } catch { return {}; }
+}
+function saveAccounts(a) {
+  try { localStorage.setItem('fn_accounts', JSON.stringify(a)); } catch {}
+}
+function getCurrentUser() {
+  try { return localStorage.getItem('fn_current') || null; } catch { return null; }
+}
+function setCurrentUser(u) {
+  try { localStorage.setItem('fn_current', u || ''); } catch {}
+}
+
+// ── auto-login ────────────────────────────────────────────────────────────────
+(function init() {
+  const u = getCurrentUser();
+  if (u) applyLogin(u);
+})();
+
+// ── modal ─────────────────────────────────────────────────────────────────────
+function openLogin()  { document.getElementById('modal-overlay').classList.add('open'); showLogin(); }
+function closeModal(e){ if (!e || e.target === document.getElementById('modal-overlay')) document.getElementById('modal-overlay').classList.remove('open'); }
+function showLogin()  { document.getElementById('modal-login').style.display='block'; document.getElementById('modal-register').style.display='none'; clearErr(); }
+function showRegister(){ document.getElementById('modal-login').style.display='none'; document.getElementById('modal-register').style.display='block'; clearErr(); }
+function clearErr()   { document.querySelectorAll('.err').forEach(e=>e.style.display='none'); }
+function err(id)      { document.getElementById(id).style.display='block'; }
+
+// ── login ─────────────────────────────────────────────────────────────────────
+function doLogin() {
+  clearErr();
+  const name = document.getElementById('l-name').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  if (!name) { err('l-err-name'); return; }
+  const acc = getAccounts();
+  if (!acc[name]) { err('l-err-name'); return; }
+  if (acc[name] !== btoa(pass)) { err('l-err-pass'); return; }
+  setCurrentUser(name);
+  applyLogin(name);
+  closeModal();
+}
+
+function applyLogin(name) {
+  document.getElementById('btn-accedi').style.display = 'none';
+  const av = document.getElementById('btn-avatar');
+  av.style.display = 'flex';
+  av.textContent   = name[0].toUpperCase();
+  document.getElementById('menu-name').textContent = name;
+  document.getElementById('sb-user').textContent   = 'Connesso come ' + name;
+}
+
+// ── register ──────────────────────────────────────────────────────────────────
+function doRegister() {
+  clearErr();
+  const name  = document.getElementById('r-name').value.trim();
+  const pass  = document.getElementById('r-pass').value;
+  const pass2 = document.getElementById('r-pass2').value;
+  let ok = true;
+  const acc = getAccounts();
+  if (!name || acc[name]) { err('r-err-name'); ok = false; }
+  if (pass.length < 6)    { err('r-err-pass'); ok = false; }
+  if (pass !== pass2)     { err('r-err-pass2'); ok = false; }
+  if (!ok) return;
+  acc[name] = btoa(pass);
+  saveAccounts(acc);
+  setCurrentUser(name);
+  applyLogin(name);
+  closeModal();
+}
+
+// ── logout ────────────────────────────────────────────────────────────────────
+function doLogout() {
+  setCurrentUser(null);
+  document.getElementById('btn-accedi').style.display = 'flex';
+  document.getElementById('btn-avatar').style.display = 'none';
+  document.getElementById('sb-user').textContent = 'Non connesso';
+  toggleUserMenu(false);
+}
+
+// ── user menu ─────────────────────────────────────────────────────────────────
+function toggleUserMenu(force) {
+  const m = document.getElementById('user-menu');
+  const open = force !== undefined ? force : !m.classList.contains('open');
+  m.classList.toggle('open', open);
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#btn-avatar') && !e.target.closest('#user-menu'))
+    document.getElementById('user-menu').classList.remove('open');
+});
+
+// ── navigation ────────────────────────────────────────────────────────────────
+// ── Freenet node gateway ─────────────────────────────────────────────────────
+const FN_NODE = 'http://127.0.0.1:7509';
+const FN_ROUTES = {
+  'freenet://home':          '/',
+  'freenet://siti':          '/USK@siti/',
+  'freenet://river':         '/USK@river/',
+  'freenet://file':          '/downloads/',
+  'freenet://editor':        '/fproxy/editor/',
+  'freenet://impostazioni':  '/config/',
+};
+
+function navigate() {
+  const v = document.getElementById('addr-input').value.trim();
+  goTo(v);
+}
+function goTo(url) {
+  document.getElementById('addr-input').value = url;
+  if (url.startsWith('freenet://video') || url === 'video') {
+    window.open('video.html', '_self'); return;
+  }
+  const mapped = FN_ROUTES[url];
+  const nodeUrl = mapped ? FN_NODE + mapped : null;
+  const body = document.getElementById('browser-body');
+  body.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text2)">
+    <div style="font-size:40px;margin-bottom:16px">🌐</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px">${url}</div>
+    ${nodeUrl ? `<div style="font-size:12px;color:var(--accent);margin-bottom:10px">→ ${nodeUrl}</div>` : ''}
+    <div style="font-size:13px;margin-bottom:20px">Caricamento dalla rete Freenet (nodo locale)…</div>
+    ${nodeUrl ? `<a href="${nodeUrl}" target="_blank" style="padding:9px 20px;background:var(--accent);color:#fff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none">Apri nel nodo locale</a>` : ''}
+  </div>`;
+}
+function reloadPage() { document.getElementById('addr-input').value = 'freenet://home'; showHomeScreen(); }
+function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  if (q) goTo('freenet://cerca?q=' + encodeURIComponent(q));
+}
+
+// ── panels ────────────────────────────────────────────────────────────────────
+const SPAM = [
+  { mac:'A4:C3:F0:11:22:33', ip:'192.0.2.55',   rpm:312, status:'blocked' },
+  { mac:'B8:27:EB:AA:BB:CC', ip:'203.0.113.4',  rpm:189, status:'blocked' },
+  { mac:'DC:A6:32:FF:EE:DD', ip:'198.51.100.9', rpm:95,  status:'blocked' },
+  { mac:'E4:5F:01:12:34:56', ip:'192.0.2.200',  rpm:58,  status:'watch'   },
+  { mac:'F0:2F:4B:99:88:77', ip:'203.0.113.99', rpm:54,  status:'watch'   },
+];
+const REQS = [
+  { icon:'⚠️', sev:'warn',   title:'Header mancante: X-Node-ID',    detail:'12 req da 192.0.2.55 — campo obbligatorio assente',  time:'13:51:02' },
+  { icon:'🚫', sev:'danger', title:'Payload vuoto su /store',        detail:'POST senza body da B8:27:EB:AA:BB:CC — bloccato',    time:'13:50:47' },
+  { icon:'⚠️', sev:'warn',   title:'Protocollo obsoleto',            detail:'node-1e9d usa proto/0.1 (min: proto/0.3)',           time:'13:49:33' },
+  { icon:'ℹ️', sev:'info',   title:'Richiesta duplicata',            detail:'Hash identico 3x da node-8c1b in 5s — dedup',       time:'13:48:11' },
+  { icon:'🚫', sev:'danger', title:'Firma ECDSA non valida',         detail:'Firma corrotta da 192.0.2.55 — scartata',           time:'13:47:58' },
+];
+
+function openPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('open'));
+  const p = document.getElementById('panel-' + id);
+  if (id === 'antispam') renderSpamPanel();
+  if (id === 'scanner')  renderScanPanel();
+  p.classList.add('open');
+  toggleUserMenu(false);
+}
+function closePanel(id) { document.getElementById('panel-' + id).classList.remove('open'); }
+
+function renderSpamPanel() {
+  document.getElementById('panel-antispam-body').innerHTML =
+    `<div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+       <span style="font-size:12px;color:var(--text2)">${SPAM.filter(s=>s.status==='blocked').length} bloccati · ${SPAM.filter(s=>s.status==='watch').length} osservati</span>
+       <button class="btn-sm btn-sm-danger" onclick="scanNow()">🔍 Scansiona</button>
+     </div>` +
+    SPAM.map((s,i) => `
+      <div class="spam-row">
+        <div class="spam-mac">${s.mac}</div>
+        <div style="color:var(--text2);font-size:11px;margin-top:2px">${s.ip}</div>
+        <div style="margin-top:4px">
+          Req/min: <span class="spam-rpm">${s.rpm}</span> &nbsp;
+          ${s.status==='blocked'
+            ? '<span style="color:var(--danger)">🚫 Bloccato</span>'
+            : '<span style="color:var(--warn)">👁 Osservato</span>'}
+        </div>
+        <div class="spam-acts">
+          ${s.status==='blocked'
+            ? `<button class="btn-sm btn-sm-neutral" onclick="toggleMAC(${i})">Sblocca</button>`
+            : `<button class="btn-sm btn-sm-danger"  onclick="toggleMAC(${i})">Blocca MAC</button>`}
+        </div>
+      </div>`).join('');
+}
+
+function toggleMAC(i) {
+  SPAM[i].status = SPAM[i].status === 'blocked' ? 'watch' : 'blocked';
+  renderSpamPanel();
+}
+function scanNow() { alert('Scansione completata: ' + SPAM.filter(s=>s.status==='blocked').length + ' MAC bloccati'); }
+
+function renderScanPanel() {
+  document.getElementById('panel-scanner-body').innerHTML =
+    `<div style="margin-bottom:12px">
+       <button class="btn-sm btn-sm-danger" style="width:100%" onclick="renderScanPanel()">🔍 Nuova scansione</button>
+     </div>` +
+    REQS.map(r => `
+      <div class="spam-row" style="margin-bottom:8px">
+        <div style="font-size:16px;margin-bottom:4px">${r.icon} <strong style="font-size:13px">${r.title}</strong></div>
+        <div style="color:var(--text2);font-size:12px">${r.detail}</div>
+        <div style="color:var(--text2);font-size:11px;margin-top:4px">${r.time} &nbsp;
+          <span style="color:${r.sev==='danger'?'var(--danger)':r.sev==='warn'?'var(--warn)':'var(--text2)'}">${r.sev.toUpperCase()}</span>
+        </div>
+      </div>`).join('');
+}
+</script>
+</body>
+</html>
