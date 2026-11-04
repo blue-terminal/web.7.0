@@ -166,19 +166,9 @@ const ARCHIVE_KEY = 'fn_posts';
 const MAX_LEN = 280;
 const COLORS = ['#1da1f2','#e1306c','#00c896','#ff9f0a','#7c3aed','#ef4444','#0a84ff'];
 
-const DEFAULT_POSTS = [
-  { id:'t1', user:'satoshi_fn',  body:'Freenet è il futuro del web libero. Nessun server, nessuna censura. #freenet #p2p',             likes:142, rt:38, liked:false, rted:false, time:'2026-10-31T10:22:00Z' },
-  { id:'t2', user:'crypt0_rosa', body:'Web 7.0 è decentralizzato per design, non per marketing. #web70 #freenet',                      likes:87,  rt:21, liked:false, rted:false, time:'2026-10-31T09:10:00Z' },
-  { id:'t3', user:'anna_fn',     body:'Ho appena caricato il mio primo video su FreenetTV 🎬 Libertà totale! #fresnettv',              likes:55,  rt:12, liked:false, rted:false, time:'2026-10-30T22:45:00Z' },
-  { id:'t4', user:'node_privato',body:'Ricorda: su Freenet ogni nodo è uguale. Niente admin, niente ban. 🔐 #privacy',                 likes:204, rt:67, liked:false, rted:false, time:'2026-10-30T18:30:00Z' },
-  { id:'t5', user:'p2p_marco',   body:'Il protocollo Freenet usa crittografia end-to-end per ogni contratto. Leggete il whitepaper 📄', likes:93,  rt:29, liked:false, rted:false, time:'2026-10-30T14:15:00Z' },
-  { id:'t6', user:'libero_rete', body:'Basta con le piattaforme che monetizzano i tuoi dati. Passa a FreenetPosts 👊',                  likes:311, rt:88, liked:false, rted:false, time:'2026-10-29T20:00:00Z' },
-  { id:'t7', user:'anonimo_7',   body:'Se puoi leggere questo, sei già sulla rete più libera del mondo 🌐 #freenet',                   likes:512, rt:134,liked:false, rted:false, time:'2026-10-29T11:11:00Z' },
-  { id:'t8', user:'geek_fn',     body:'Testando River Chat + FreenetMail tutto su Freenet. Infrastruttura zero trust 💪 #freenet',      likes:74,  rt:18, liked:false, rted:false, time:'2026-10-28T16:30:00Z' },
-];
-
+// La rete inizia vuota — i post vengono creati dagli utenti Freenet
 function loadPosts() {
-  try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY)||'null') || DEFAULT_POSTS; } catch { return DEFAULT_POSTS; }
+  try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY)||'null') || []; } catch { return []; }
 }
 function savePosts(arr) { try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arr)); } catch {} }
 function loadPD()  { try { return JSON.parse(localStorage.getItem('fn_postd')||'{}'); } catch { return {}; } }

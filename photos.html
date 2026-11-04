@@ -159,21 +159,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 const EMOJIS = ['🌅','🌄','🌃','🏔️','🌊','🌺','🌸','🦋','🐬','🦅','🍕','🎨','🎸','🚀','🌍','🌈','❄️','🔥','💫','🎭'];
 const ARCHIVE_KEY = 'fn_photos';
 
-// ── foto di default (8 post demo) ─────────────────────────────────────────
-const DEFAULT_PHOTOS = [
-  { id:'p1', user:'anna_fn',  emoji:'🌅', caption:'Alba sulla rete decentralizzata 🌐',    tags:'#freenet #alba',       likes:42, liked:false, cmts:[{u:'mario',t:'Bellissima!'},{u:'lucia',t:'❤️'}], time:'2026-10-30T08:20:00Z' },
-  { id:'p2', user:'marco_fn', emoji:'🏔️', caption:'Libertà di condivisione, senza censura', tags:'#libertà #privacy',    likes:87, liked:false, cmts:[],                                            time:'2026-10-29T14:33:00Z' },
-  { id:'p3', user:'lucia_fn', emoji:'🌊', caption:'Il futuro del web è decentralizzato',    tags:'#web70 #p2p',         likes:61, liked:false, cmts:[{u:'anna_fn',t:'Sì! 💯'}],                    time:'2026-10-28T19:45:00Z' },
-  { id:'p4', user:'node_42',  emoji:'🦋', caption:'Ogni nodo è libero',                    tags:'#nodo #freenet',      likes:33, liked:false, cmts:[],                                            time:'2026-10-27T11:10:00Z' },
-  { id:'p5', user:'crypt0',   emoji:'🔥', caption:'Nessun server centrale può fermarci',   tags:'#cypherpunk',         likes:118,liked:false, cmts:[{u:'marco_fn',t:'Esatto! 🔥'}],              time:'2026-10-26T22:05:00Z' },
-  { id:'p6', user:'p2p_rosa', emoji:'🌺', caption:'Condividi senza tracce',                tags:'#anonimo #sicuro',    likes:55, liked:false, cmts:[],                                            time:'2026-10-25T09:30:00Z' },
-  { id:'p7', user:'freenet_x',emoji:'🚀', caption:'Web 7.0 — infrastruttura del futuro',  tags:'#web70 #freenet',     likes:204,liked:false, cmts:[{u:'crypt0',t:'🚀🚀🚀'}],                    time:'2026-10-24T16:20:00Z' },
-  { id:'p8', user:'anonimo_1',emoji:'🌈', caption:'La bellezza dell\'anonimato',           tags:'#privacy #anonimo',  likes:79, liked:false, cmts:[],                                            time:'2026-10-23T13:55:00Z' },
-];
-
+// La rete inizia vuota — le foto vengono caricate dagli utenti Freenet
 // ── localStorage ──────────────────────────────────────────────────────────
 function loadPhotos() {
-  try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY)||'null') || DEFAULT_PHOTOS; } catch { return DEFAULT_PHOTOS; }
+  try { return JSON.parse(localStorage.getItem(ARCHIVE_KEY)||'null') || []; } catch { return []; }
 }
 function savePhotos(arr) {
   try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arr)); } catch {}
