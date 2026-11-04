@@ -524,8 +524,9 @@ body {
   <div class="player-wrap" onclick="e=>e.stopPropagation()">
     <div class="player-main">
       <div class="pscreen" id="pscreen" onclick="togglePlay()">
-        <span id="pemoji">▶️</span>
-        <button class="pclose" onclick="document.getElementById('player-ov').classList.remove('open');stopProg()">✕</button>
+        <video id="pvideo" style="display:none;width:100%;height:100%;object-fit:contain;position:absolute;top:0;left:0;background:#000" preload="metadata"></video>
+        <span id="pemoji" style="position:relative;z-index:1">▶️</span>
+        <button class="pclose" onclick="closePlBtn()">✕</button>
       </div>
       <div class="pbar-wrap">
         <div class="pbar" onclick="seekBar(event)"><div class="pprog" id="pprog"></div></div>
@@ -589,10 +590,11 @@ body {
     <button class="modal-x" onclick="closeUpload()">✕</button>
     <h2>Pubblica su FreenetTV</h2>
     <p>Il video viene aggiunto alla rete Freenet come contratto. Tutti i nodi potranno accedervi.</p>
-    <div class="drop-area" id="drop-area">
-      <div style="font-size:40px;margin-bottom:10px">📤</div>
-      <div style="font-size:14px;font-weight:500">Trascina il video qui</div>
-      <div style="font-size:12px;margin-top:4px;color:var(--yt-text3)">oppure clicca per selezionare · MP4, WebM</div>
+    <input type="file" id="u-file" accept="video/*,audio/*" style="display:none" onchange="onFileChosen(this)">
+    <div class="drop-area" id="drop-area" onclick="document.getElementById('u-file').click()" ondrop="onDropFile(event)" ondragover="event.preventDefault()">
+      <div style="font-size:40px;margin-bottom:10px" id="drop-icon">📤</div>
+      <div style="font-size:14px;font-weight:500" id="drop-label">Trascina il video qui</div>
+      <div style="font-size:12px;margin-top:4px;color:var(--yt-text3)" id="drop-sub">oppure clicca per selezionare · MP4, WebM, MKV</div>
     </div>
     <div class="field"><label>Titolo</label><input id="u-title" type="text" placeholder="Titolo del video"></div>
     <div class="field"><label>Descrizione</label><textarea id="u-desc" rows="2" placeholder="Descrizione breve…"></textarea></div>
@@ -628,6 +630,61 @@ body {
 </div>
 
 <script>
+// ── INDEXEDDB — blob video locali (open source, nessun server) ────────────────
+const IDB_NAME='FreenetTV', IDB_STORE='blobs', IDB_VER=1;
+function openIDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(IDB_NAME,IDB_VER);
+    r.onupgradeneeded=e=>e.target.result.createObjectStore(IDB_STORE);
+    r.onsuccess=e=>res(e.target.result);
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function storeVideoIDB(key,ab){
+  const db=await openIDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(ab,key);
+    tx.oncomplete=res;tx.onerror=()=>rej(tx.error);
+  });
+}
+async function getVideoIDB(key){
+  try{
+    const db=await openIDB();
+    return new Promise(res=>{
+      const tx=db.transaction(IDB_STORE,'readonly');
+      const r=tx.objectStore(IDB_STORE).get(key);
+      r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null);
+    });
+  }catch{return null;}
+}
+
+// ── CHK@ KEY content-addressed (SHA-256 del file, come Freenet/IPFS) ─────────
+async function makeChkKey(arrayBuffer){
+  const hash=await crypto.subtle.digest('SHA-256',arrayBuffer);
+  const bytes=new Uint8Array(hash);
+  // Base58 (alfabeto Freenet / Bitcoin)
+  const A='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  let n=BigInt('0x'+[...bytes].map(b=>b.toString(16).padStart(2,'0')).join(''));
+  let s='';while(n>0n){s=A[Number(n%58n)]+s;n=n/58n;}
+  for(const b of bytes){if(b!==0)break;s='1'+s;}
+  return 'CHK@'+s.padEnd(44,'A').substring(0,44)+',AAAA,AAAA';
+}
+
+// ── PUT su Freenet P2P (quando il nodo è attivo) ──────────────────────────────
+function tryPutFreenet(key,ab){
+  FN.detectNode().then(node=>{
+    if(!node||node.type!=='new')return;
+    const ws=FN.openContractWs();if(!ws)return;
+    ws.onopen=()=>{
+      const meta=new TextEncoder().encode(JSON.stringify({key,size:ab.byteLength}));
+      const hdr=new Uint8Array(4+meta.length);
+      new DataView(hdr.buffer).setUint32(0,meta.length,false);
+      hdr.set(meta,4);ws.send(hdr);ws.send(ab);ws.close();
+    };
+  }).catch(()=>{});
+}
+
 // ── THUMBNAIL GRADIENTS PER CATEGORIA ────────────────────────────────────────
 const THUMB_COLORS = {
   tech:    ['#1a1a2e','#16213e','#0f3460'],
@@ -763,7 +820,6 @@ function _fmt(n){if(n>=1000000)return(n/1000000).toFixed(1)+'M';if(n>=1000)retur
 function openPlayer(id){
   const v=allVideos().find(x=>x.id===id);if(!v)return;
   curId=id;curCh=v.ch;
-  document.getElementById('pemoji').textContent=v.emoji;
   document.getElementById('ptitle').textContent=v.title;
   document.getElementById('pch').textContent=v.ch;
   document.getElementById('pchav').textContent=v.ch[0].toUpperCase();
@@ -771,19 +827,55 @@ function openPlayer(id){
   document.getElementById('pkey').textContent='🔑 '+v.key;
   document.getElementById('pscreen').style.background=thumbGrad(v.cat);
   document.getElementById('player-ov').classList.add('open');
-  playProg=0;playing=true;
+  stopProg();playProg=0;playing=true;
   document.getElementById('pplaybtn').textContent='⏸';
-  startProg();
-  renderInteract(id,v);
-  renderCmts(id);
-  renderSubBtn(v.ch);
-  renderSideVideos(id);
+
+  // Carica video reale da IndexedDB (open source, nessun server)
+  const pv=document.getElementById('pvideo');
+  const pe=document.getElementById('pemoji');
+  pe.textContent=v.emoji;pe.style.display='flex';
+  pv.style.display='none';
+  if(pv._blobUrl){URL.revokeObjectURL(pv._blobUrl);pv._blobUrl=null;}
+  pv.src='';pv.ontimeupdate=null;
+
+  if(v.key&&v.key.startsWith('CHK@')){
+    getVideoIDB(v.key).then(ab=>{
+      if(!ab){startProg();return;}
+      const blob=new Blob([ab],{type:v.mime||'video/mp4'});
+      const url=URL.createObjectURL(blob);
+      pv._blobUrl=url;pv.src=url;
+      pv.style.display='block';pe.style.display='none';
+      pv.play().catch(()=>{});
+      pv.ontimeupdate=()=>{
+        if(!pv.duration)return;
+        const p=(pv.currentTime/pv.duration)*100;
+        document.getElementById('pprog').style.width=p+'%';
+        document.getElementById('ptime').textContent=fmt(Math.floor(pv.currentTime))+' / '+fmt(Math.floor(pv.duration));
+      };
+      pv.onended=()=>{playing=false;document.getElementById('pplaybtn').textContent='▶';};
+    });
+  }else{startProg();}
+
+  renderInteract(id,v);renderCmts(id);renderSubBtn(v.ch);renderSideVideos(id);
   const u=getUser();
   const myAv=document.getElementById('cmt-my-av');
   if(myAv){myAv.textContent=u?u[0].toUpperCase():'?';if(u)myAv.style.background=chColor(u);}
 }
-function closePl(e){if(e&&e.target!==document.getElementById('player-ov'))return;document.getElementById('player-ov').classList.remove('open');stopProg();}
-function togglePlay(){playing=!playing;document.getElementById('pplaybtn').textContent=playing?'⏸':'▶';playing?startProg():stopProg();}
+function closePlBtn(){
+  document.getElementById('player-ov').classList.remove('open');stopProg();
+  const pv=document.getElementById('pvideo');
+  if(pv){pv.pause();if(pv._blobUrl){URL.revokeObjectURL(pv._blobUrl);pv._blobUrl=null;}pv.src='';}
+}
+function closePl(e){if(e&&e.target!==document.getElementById('player-ov'))return;closePlBtn();}
+function togglePlay(){
+  const pv=document.getElementById('pvideo');
+  if(pv&&pv.src&&pv.readyState>0){
+    playing=!playing;playing?pv.play().catch(()=>{}):pv.pause();
+    document.getElementById('pplaybtn').textContent=playing?'⏸':'▶';
+  }else{
+    playing=!playing;document.getElementById('pplaybtn').textContent=playing?'⏸':'▶';playing?startProg():stopProg();
+  }
+}
 function startProg(){
   stopProg();
   playI=setInterval(()=>{
@@ -795,7 +887,12 @@ function startProg(){
   },300);
 }
 function stopProg(){clearInterval(playI);}
-function seekBar(e){const b=e.currentTarget;playProg=(e.offsetX/b.offsetWidth)*100;document.getElementById('pprog').style.width=playProg+'%';}
+function seekBar(e){
+  const b=e.currentTarget;playProg=(e.offsetX/b.offsetWidth)*100;
+  document.getElementById('pprog').style.width=playProg+'%';
+  const pv=document.getElementById('pvideo');
+  if(pv&&pv.duration)pv.currentTime=(playProg/100)*pv.duration;
+}
 function fmt(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 
 function renderInteract(id,v){
@@ -852,16 +949,38 @@ function renderSideVideos(curId){
 // ── UPLOAD ────────────────────────────────────────────────────────────────────
 function openUpload(){const u=getUser();if(!u){openLogin();return;}document.getElementById('upload-modal').classList.add('open');}
 function closeUpload(e){if(!e||e.target===document.getElementById('upload-modal'))document.getElementById('upload-modal').classList.remove('open');}
-function publishVideo(){
+
+function onFileChosen(inp){if(inp.files[0])setDropFile(inp.files[0]);}
+function onDropFile(e){e.preventDefault();if(e.dataTransfer.files[0])setDropFile(e.dataTransfer.files[0]);}
+function setDropFile(f){
+  document.getElementById('drop-icon').textContent='✅';
+  document.getElementById('drop-label').textContent=f.name;
+  document.getElementById('drop-sub').textContent=(f.size/1024/1024).toFixed(1)+' MB · '+f.type;
+}
+
+async function publishVideo(){
   const t=document.getElementById('u-title').value.trim();
   if(!t){alert('Inserisci un titolo');return;}
-  const cat=document.getElementById('u-cat').value.trim()||'tech';
-  const ts=Date.now();
-  const pseudo=btoa(t+ts).replace(/[=+/]/g,'').substring(0,44).padEnd(44,'A');
-  const key='/v1/contract/web/'+pseudo+'/';
-  const v={id:ts,emoji:'🎬',title:t,ch:getUser()||'Tu',views:'0',ago:new Date().toLocaleString('it'),dur:'—',cat,live:false,key};
-  MY_VIDEOS.push(v);saveMyVideos(MY_VIDEOS);renderGrid(allVideos());closeUpload();
-  alert(`Video pubblicato!\nChiave: http://127.0.0.1:7509${key}`);
+  const f=document.getElementById('u-file').files[0];
+  if(!f){alert('Seleziona un file video');return;}
+  const btn=document.querySelector('.btn-pub');
+  btn.textContent='⏳ Calcolo chiave CHK@…';btn.disabled=true;
+  try{
+    const ab=await f.arrayBuffer();
+    const key=await makeChkKey(ab);
+    await storeVideoIDB(key,ab);
+    const cat=document.getElementById('u-cat').value.trim()||'tech';
+    const ts=Date.now();
+    const v={id:ts,emoji:'🎬',title:t,ch:getUser()||'Tu',views:'0',
+      ago:new Date().toLocaleString('it'),dur:'—',cat,live:false,key,mime:f.type};
+    MY_VIDEOS.push(v);saveMyVideos(MY_VIDEOS);renderGrid(allVideos());closeUpload();
+    tryPutFreenet(key,ab);
+    alert('✅ Video pubblicato!\n\n🔑 CHK@ (chiave content-addressed):\n'+key+'\n\nSalvato in locale — condividi la chiave per distribuirlo sulla rete Freenet P2P.');
+  }catch(err){
+    alert('Errore: '+err.message);
+  }finally{
+    btn.textContent='🌐 Pubblica su Freenet';btn.disabled=false;
+  }
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
