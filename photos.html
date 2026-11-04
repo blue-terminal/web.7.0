@@ -193,9 +193,29 @@ function render() {
   g.innerHTML = [...PHOTOS].reverse().map(p => cardHtml(p)).join('');
 }
 
+// ── follow utenti (FreenetGram) ───────────────────────────────────────────
+function getFollows(){ try{return JSON.parse(localStorage.getItem('fn_gram_follows')||'{}');}catch{return {};} }
+function saveFollows(f){ try{localStorage.setItem('fn_gram_follows',JSON.stringify(f));}catch{} }
+function isFollowing(u){ return !!getFollows()[u]; }
+function toggleFollow(u){
+  const me=FN.getCurrentUser(); if(!me){openModal('login');return;}
+  if(u===me) return;
+  const f=getFollows();
+  if(f[u]) delete f[u]; else f[u]=Date.now();
+  saveFollows(f); render();
+}
+function sharePhoto(id){
+  const p=PHOTOS.find(x=>x.id===id);
+  if(!p) return;
+  prompt('Chiave contratto Freenet della foto:','CHK@'+btoa(id).replace(/[=+/]/g,'').substring(0,44)+'/foto.jpg');
+}
+
 function cardHtml(p) {
+  const me = FN.getCurrentUser();
   const pd = loadPD();
   const st = pd[p.id] || { likes: p.likes, liked: p.liked };
+  const fol = isFollowing(p.user);
+  const isMine = p.user===me;
   const imgContent = p.url
     ? `<img src="${escHtml(p.url)}" onerror="this.style.display='none';this.nextSibling.style.display='flex'">`
     : '';
@@ -205,8 +225,8 @@ function cardHtml(p) {
     <div class="card-body">
       <div class="card-head">
         <div class="card-av">${escHtml((p.user||'?')[0].toUpperCase())}</div>
-        <span class="card-user">${escHtml(p.user)}</span>
-        <span class="card-time">${fmtTime(p.time)}</span>
+        <div style="flex:1"><span class="card-user">${escHtml(p.user)}</span> <span class="card-time">${fmtTime(p.time)}</span></div>
+        ${!isMine?`<button onclick="toggleFollow('${escHtml(p.user)}')" style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid;background:transparent;${fol?'border-color:var(--border);color:var(--text2)':'border-color:var(--pink);color:var(--pink)'}">${fol?'✓ Seguita':'+ Segui'}</button>`:''}
       </div>
       <div class="card-caption">${escHtml(p.caption||'')}</div>
       ${p.tags ? `<div style="font-size:11px;color:var(--accent);margin-bottom:8px">${escHtml(p.tags)}</div>` : ''}
@@ -214,6 +234,7 @@ function cardHtml(p) {
         <button class="action-btn ${st.liked?'liked':''}" onclick="doLike('${escHtml(p.id)}')">${st.liked?'❤️':'🤍'}</button>
         <span class="like-count" id="lk-${escHtml(p.id)}">${st.likes}</span>
         <button class="action-btn" onclick="toggleCmts('${escHtml(p.id)}')">💬 <span id="cc-${escHtml(p.id)}">${(p.cmts||[]).length}</span></button>
+        <button class="action-btn" onclick="sharePhoto('${escHtml(p.id)}')" style="margin-left:auto;font-size:16px">↗</button>
       </div>
       <div class="cmts-box" id="cmts-${escHtml(p.id)}">
         <div id="clist-${escHtml(p.id)}">${renderCmts(p.cmts||[])}</div>

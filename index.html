@@ -210,9 +210,18 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 
     <div style="font-size:11px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;align-self:flex-start;max-width:660px;padding:0 4px">Web 7.0 — Social Decentralizzato</div>
     <div class="quick-links">
-      <a class="ql" onclick="navigate('freenet://video')"><span>▶️</span><span>FreenetTV</span></a>
-      <a class="ql" onclick="navigate('freenet://photos')"><span>📸</span><span>FreenetGram</span></a>
-      <a class="ql" onclick="navigate('freenet://posts')"><span>🐤</span><span>FreenetPosts</span></a>
+      <a class="ql" onclick="navigate('freenet://video')" style="position:relative">
+        <span>▶️</span><span>FreenetTV</span>
+        <span id="ql-subs" style="position:absolute;top:4px;right:6px;font-size:9px;color:var(--green)"></span>
+      </a>
+      <a class="ql" onclick="navigate('freenet://photos')" style="position:relative">
+        <span>📸</span><span>FreenetGram</span>
+        <span id="ql-follows-g" style="position:absolute;top:4px;right:6px;font-size:9px;color:var(--green)"></span>
+      </a>
+      <a class="ql" onclick="navigate('freenet://posts')" style="position:relative">
+        <span>🐤</span><span>FreenetPosts</span>
+        <span id="ql-follows-p" style="position:absolute;top:4px;right:6px;font-size:9px;color:var(--green)"></span>
+      </a>
       <a class="ql" onclick="navigate('freenet://river')"><span>💬</span><span>River Chat</span></a>
       <a class="ql" onclick="navigate('freenet://mail')"><span>✉️</span><span>Mail</span></a>
       <a class="ql" onclick="navigate('freenet://ghostkey')"><span>🔑</span><span>Ghostkey</span></a>
@@ -486,7 +495,18 @@ function saveAcc(a){ try { localStorage.setItem('fn_acc', JSON.stringify(a)); } 
 function getUser() { try { return localStorage.getItem('fn_user')||null; } catch { return null; } }
 function setUser(u){ try { localStorage.setItem('fn_user', u||''); } catch {} }
 
-(function init(){ const u=getUser(); if(u) applyLogin(u); })();
+(function init(){
+  const u=getUser(); if(u) applyLogin(u);
+  // mostra contatori iscrizioni sulla home
+  try {
+    const subs = Object.keys(JSON.parse(localStorage.getItem('fn_subs')||'{}')).length;
+    if(subs>0) document.getElementById('ql-subs').textContent=subs+' iscrizioni';
+    const gf = Object.keys(JSON.parse(localStorage.getItem('fn_gram_follows')||'{}')).length;
+    if(gf>0) document.getElementById('ql-follows-g').textContent=gf+' seguiti';
+    const pf = Object.keys(JSON.parse(localStorage.getItem('fn_follows')||'{}')).length;
+    if(pf>0) document.getElementById('ql-follows-p').textContent=pf+' seguiti';
+  } catch {}
+})();
 
 function openLogin() { document.getElementById('modal-bg').classList.add('open'); showLogin(); }
 function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); }

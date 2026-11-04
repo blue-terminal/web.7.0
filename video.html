@@ -140,6 +140,25 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 /* close btn */
 .pclose { position: absolute; top: 8px; right: 10px; background: #0008; border: none; color: #fff; font-size: 18px; cursor: pointer; border-radius: 50%; width: 28px; height: 28px; }
 
+/* canale row nel player */
+.p-ch-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.p-ch-av { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg,var(--red),#ff6b6b); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #fff; flex-shrink: 0; }
+.p-ch-info { flex: 1; }
+.p-ch-name { font-size: 13px; font-weight: 700; cursor: pointer; }
+.p-ch-name:hover { color: var(--red); }
+.p-subs-count { font-size: 11px; color: var(--text2); }
+.sub-btn { padding: 6px 16px; border-radius: 18px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; transition: .15s; }
+.sub-btn.unsub { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+.sub-btn.unsub:hover { border-color: var(--red); color: var(--red); }
+.sub-btn.subd { background: var(--red); color: #fff; }
+.sub-btn.subd:hover { background: #c62828; }
+
+/* canali iscritti in sidebar */
+.sb-ch { display: flex; align-items: center; gap: 8px; padding: 7px 16px; font-size: 12px; cursor: pointer; border-radius: 0 20px 20px 0; margin-right: 10px; }
+.sb-ch:hover { background: var(--bg3); }
+.sb-ch-av { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg,var(--red),#ff6b6b); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #fff; flex-shrink: 0; }
+.sb-new { width: 6px; height: 6px; border-radius: 50%; background: var(--red); flex-shrink: 0; margin-left: auto; }
+
 /* ── UPLOAD MODAL ── */
 .upload-modal { position: fixed; inset: 0; background: #000000aa; backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 500; }
 .upload-modal.open { display: flex; }
@@ -230,6 +249,9 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
     <div class="sb-item" onclick="filterCat('gaming',this)"><span>🎮</span><span>Gaming</span></div>
     <div class="sb-sep"></div>
     <div class="sb-item" onclick="window.location.href='index.html'"><span>🌐</span><span>Browser</span></div>
+    <div class="sb-sep"></div>
+    <div class="sb-label">Iscrizioni</div>
+    <div id="sb-subs"></div>
   </div>
 
   <div class="main">
@@ -255,7 +277,14 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
     </div>
     <div class="pctrl">
       <div class="p-title" id="ptitle">—</div>
-      <div class="p-ch"    id="pch">—</div>
+      <div class="p-ch-row">
+        <div class="p-ch-av" id="pchav">?</div>
+        <div class="p-ch-info">
+          <div class="p-ch-name" id="pch" onclick="filterByCh(curCh)">—</div>
+          <div class="p-subs-count" id="pchsubs">0 iscritti · 0 subscribers</div>
+        </div>
+        <button class="sub-btn unsub" id="sub-btn" onclick="toggleSub()">🔔 Iscriviti</button>
+      </div>
       <div class="p-key"   id="pkey">—</div>
       <div class="pbar" onclick="seekBar(event)"><div class="pprog" id="pprog"></div></div>
       <div class="pbtns">
@@ -423,17 +452,61 @@ function showPubGuide() {
 }
 
 // ── player ────────────────────────────────────────────────────────────────────
-let curId = null, playI = null, playProg = 0, playing = false;
+let curId = null, curCh = null, playI = null, playProg = 0, playing = false;
 
 function getVD(id) { try { const d=JSON.parse(localStorage.getItem('fn_vd')||'{}'); if(!d[id]) d[id]={likes:0,liked:false,disliked:false,cmts:[]}; return d[id]; } catch { return {likes:0,liked:false,disliked:false,cmts:[]}; } }
 function saveVD(id,vd) { try { const d=JSON.parse(localStorage.getItem('fn_vd')||'{}'); d[id]=vd; localStorage.setItem('fn_vd',JSON.stringify(d)); } catch {} }
 
+// ── iscrizioni canali ─────────────────────────────────────────────────────────
+function getSubs() { try{return JSON.parse(localStorage.getItem('fn_subs')||'{}');}catch{return {};} }
+function saveSubs(s){ try{localStorage.setItem('fn_subs',JSON.stringify(s));}catch{} }
+function getChData(ch) {
+  try{const d=JSON.parse(localStorage.getItem('fn_ch')||'{}');if(!d[ch])d[ch]={subs:Math.floor(Math.random()*50000+100)};return d[ch];}catch{return{subs:0};}
+}
+function isSubd(ch){ return !!getSubs()[ch]; }
+function toggleSub() {
+  const u=getUser(); if(!u){openLogin();return;}
+  const s=getSubs();
+  if(s[curCh]){ delete s[curCh]; }
+  else { s[curCh]=Date.now(); }
+  saveSubs(s);
+  renderSubBtn(curCh);
+  renderSidebarSubs();
+}
+function renderSubBtn(ch) {
+  const btn=document.getElementById('sub-btn');
+  const subd=isSubd(ch);
+  btn.className='sub-btn '+(subd?'subd':'unsub');
+  btn.textContent=subd?'✅ Iscritto':'🔔 Iscriviti';
+  const cd=getChData(ch);
+  const sc=Object.keys(getSubs()).includes(ch)?cd.subs+1:cd.subs;
+  document.getElementById('pchsubs').textContent=_fmt(sc)+' iscritti · subscribers';
+}
+function renderSidebarSubs() {
+  const s=getSubs();
+  const el=document.getElementById('sb-subs');
+  const chs=Object.keys(s);
+  if(!chs.length){el.innerHTML='<div style="padding:6px 16px;font-size:11px;color:var(--text2)">Nessuna iscrizione</div>';return;}
+  el.innerHTML=chs.slice(0,8).map(ch=>`
+    <div class="sb-ch" onclick="filterByCh('${ch}')">
+      <div class="sb-ch-av">${ch[0].toUpperCase()}</div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ch}</span>
+    </div>`).join('');
+}
+function filterByCh(ch) {
+  if(!ch) return;
+  renderGrid(allVideos().filter(v=>v.ch===ch));
+  document.querySelectorAll('.cat').forEach(c=>c.classList.remove('active'));
+}
+function _fmt(n){ if(n>=1000000)return(n/1000000).toFixed(1)+'M'; if(n>=1000)return(n/1000).toFixed(1)+'K'; return String(n); }
+
 function openPlayer(id) {
   const v = allVideos().find(x=>x.id===id); if(!v) return;
-  curId = id;
+  curId = id; curCh = v.ch;
   document.getElementById('pemoji').textContent  = v.emoji;
   document.getElementById('ptitle').textContent  = v.title;
-  document.getElementById('pch').textContent     = v.ch + ' · ' + v.views + ' visualizzazioni';
+  document.getElementById('pch').textContent     = v.ch;
+  document.getElementById('pchav').textContent   = v.ch[0].toUpperCase();
   document.getElementById('pkey').textContent    = '🔑 ' + v.key;
   document.getElementById('player-ov').classList.add('open');
   playProg=0; playing=true;
@@ -441,6 +514,7 @@ function openPlayer(id) {
   startProg();
   renderInteract(id, v);
   renderCmts(id);
+  renderSubBtn(v.ch);
 }
 function closePl(e) {
   if(e&&e.target!==document.getElementById('player-ov')) return;
@@ -484,16 +558,27 @@ function doShare() {
 function renderCmts(id) {
   const vd=getVD(id);
   const el=document.getElementById('cmt-list');
-  if(!vd.cmts.length){el.innerHTML='<div class="no-cmt">Nessun commento — tutti i nodi possono commentare.</div>';return;}
-  el.innerHTML=vd.cmts.slice().reverse().map(c=>`
+  if(!vd.cmts.length){el.innerHTML='<div class="no-cmt">Nessun commento — tutti i nodi possono commentare · No comments yet.</div>';return;}
+  el.innerHTML=vd.cmts.slice().reverse().map((c,i)=>`
     <div class="cmt">
       <div class="cmt-av" style="background:hsl(${c.name.charCodeAt(0)*7},35%,28%)">${c.name[0].toUpperCase()}</div>
-      <div>
-        <div class="cmt-n">${c.name}</div>
+      <div style="flex:1">
+        <div class="cmt-n">@${c.name}</div>
         <div class="cmt-t">${c.text}</div>
-        <div class="cmt-ts">${c.time}</div>
+        <div class="cmt-ts" style="display:flex;align-items:center;gap:10px">
+          <span>${c.time}</span>
+          <button onclick="likeCmt(${id},${vd.cmts.length-1-i})" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;padding:0">
+            👍 ${c.clikes||0}
+          </button>
+        </div>
       </div>
     </div>`).join('');
+}
+function likeCmt(vid, idx) {
+  const vd=getVD(vid);
+  if(!vd.cmts[idx]) return;
+  vd.cmts[idx].clikes=(vd.cmts[idx].clikes||0)+1;
+  saveVD(vid,vd); renderCmts(vid);
 }
 function postCmt() {
   const u=getUser(); if(!u){openLogin();return;}
@@ -526,7 +611,7 @@ function saveAcc(a){ try{localStorage.setItem('fn_acc',JSON.stringify(a));}catch
 function getUser() { try{return localStorage.getItem('fn_user')||null;}catch{return null;} }
 function setUser(u){ try{localStorage.setItem('fn_user',u||'');}catch{} }
 
-(function init(){ const u=getUser(); if(u){applyLogin(u); updateKeyBar(u);} })();
+(function init(){ const u=getUser(); if(u){applyLogin(u); updateKeyBar(u);} renderSidebarSubs(); })();
 
 function openLogin() { document.getElementById('modal-bg').classList.add('open'); showLogin(); }
 function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); }

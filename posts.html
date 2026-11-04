@@ -71,6 +71,20 @@ textarea#compose-txt{width:100%;background:transparent;border:none;color:var(--t
 .tab{flex:1;padding:12px;text-align:center;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:.15s;}
 .tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
 .tab:hover{background:var(--bg3);}
+.follow-btn{padding:4px 12px;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid;transition:.15s;}
+.follow-btn.unf{background:transparent;border-color:var(--cyan);color:var(--cyan);}
+.follow-btn.unf:hover{background:var(--cyan);color:#fff;}
+.follow-btn.fol{background:var(--bg3);border-color:var(--border);color:var(--text2);}
+.follow-btn.fol:hover{border-color:#e0245e;color:#e0245e;}
+.cmt-box{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+.cmt-row{display:flex;gap:6px;margin-bottom:6px;align-items:flex-start;}
+.cmt-mini-av{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;}
+.cmt-mini-body{font-size:12px;line-height:1.4;flex:1;}
+.cmt-mini-name{font-weight:700;color:var(--cyan);font-size:11px;}
+.cmt-inp-row{display:flex;gap:6px;margin-top:4px;}
+.cmt-inp{flex:1;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:16px;color:var(--text);font-size:12px;outline:none;}
+.cmt-inp:focus{border-color:var(--cyan);}
+.cmt-send{padding:6px 12px;background:var(--cyan);border:none;border-radius:16px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -184,17 +198,64 @@ function switchTab(t) {
 function render() {
   const me = FN.getCurrentUser();
   let list = [...POSTS].reverse();
-  if (currentTab==='mine') list = list.filter(p=>p.user===me);
+  if (currentTab==='mine')   list = list.filter(p=>p.user===me);
+  if (currentTab==='follow') list = list.filter(p=>isFollowing(p.user));
   const pd = loadPD();
   document.getElementById('feed').innerHTML = list.length
     ? list.map(p=>postHtml(p,pd)).join('')
     : '<div style="text-align:center;padding:40px;color:var(--text2)">Nessun post ancora</div>';
 }
 
+// ── follow ────────────────────────────────────────────────────────────────────
+function getFollows(){ try{return JSON.parse(localStorage.getItem('fn_follows')||'{}');}catch{return {};} }
+function saveFollows(f){ try{localStorage.setItem('fn_follows',JSON.stringify(f));}catch{} }
+function isFollowing(u){ return !!getFollows()[u]; }
+function toggleFollow(u){
+  const me=FN.getCurrentUser(); if(!me){openModal('login');return;}
+  if(u===me) return;
+  const f=getFollows();
+  if(f[u]) delete f[u]; else f[u]=Date.now();
+  saveFollows(f); render();
+}
+// commenti per post
+function getPostCmts(id){ try{const d=JSON.parse(localStorage.getItem('fn_pcmts')||'{}');return d[id]||[];}catch{return[];} }
+function savePostCmt(id,cmt){ try{const d=JSON.parse(localStorage.getItem('fn_pcmts')||'{}');if(!d[id])d[id]=[];d[id].push(cmt);localStorage.setItem('fn_pcmts',JSON.stringify(d));}catch{} }
+function sendCmt(id){
+  const inp=document.getElementById('cmti-'+id); if(!inp) return;
+  const t=inp.value.trim(); if(!t) return;
+  const me=FN.getCurrentUser()||'anonimo';
+  savePostCmt(id,{user:me,text:t,time:new Date().toISOString()});
+  inp.value='';
+  const box=document.getElementById('cmtbox-'+id); if(box) renderCmtBox(id,box);
+}
+function renderCmtBox(id,box){
+  const cmts=getPostCmts(id);
+  box.innerHTML=cmts.slice(-10).map(c=>`
+    <div class="cmt-row">
+      <div class="cmt-mini-av" style="background:${getColor(c.user)}">${c.user[0].toUpperCase()}</div>
+      <div class="cmt-mini-body"><span class="cmt-mini-name">@${escHtml(c.user)}</span> ${escHtml(c.text)}</div>
+    </div>`).join('')+`
+    <div class="cmt-inp-row">
+      <input class="cmt-inp" id="cmti-${escHtml(id)}" placeholder="Rispondi…" onkeydown="if(event.key==='Enter')sendCmt('${escHtml(id)}')">
+      <button class="cmt-send" onclick="sendCmt('${escHtml(id)}')">↩</button>
+    </div>`;
+}
+function toggleCmts(id){
+  const box=document.getElementById('cmtbox-'+id);
+  if(!box) return;
+  const open=box.style.display!=='block';
+  box.style.display=open?'block':'none';
+  if(open) renderCmtBox(id,box);
+}
+
 function postHtml(p,pd) {
+  const me = FN.getCurrentUser();
   const st = pd[p.id] || { likes:p.likes, rt:p.rt, liked:p.liked, rted:p.rted };
   const color = getColor(p.user);
   const body  = escHtml(p.body).replace(/(#\w+)/g,'<span style="color:var(--cyan)">$1</span>');
+  const fol   = isFollowing(p.user);
+  const cmts  = getPostCmts(p.id);
+  const isMine = p.user===me;
   return `
   <div class="post-item">
     <div class="post-av" style="background:${color}">${escHtml(p.user[0].toUpperCase())}</div>
@@ -203,6 +264,7 @@ function postHtml(p,pd) {
         <span class="post-user">${escHtml(p.user)}</span>
         <span class="post-handle">@${escHtml(p.user)}.freenet</span>
         <span class="post-time">${fmtTime(p.time)}</span>
+        ${!isMine?`<button class="follow-btn ${fol?'fol':'unf'}" onclick="toggleFollow('${escHtml(p.user)}')">${fol?'✓ Seguito':'+ Segui'}</button>`:''}
       </div>
       <div class="post-body">${body}</div>
       <div class="post-actions">
@@ -212,8 +274,9 @@ function postHtml(p,pd) {
         <button class="pa-btn ${st.rted?'retweeted':''}" onclick="doRT('${escHtml(p.id)}')">
           🔁 <span id="rt-${escHtml(p.id)}">${st.rt}</span>
         </button>
-        <button class="pa-btn" onclick="doReply('${escHtml(p.id)}')">💬</button>
+        <button class="pa-btn" onclick="toggleCmts('${escHtml(p.id)}')">💬 ${cmts.length||''}</button>
       </div>
+      <div class="cmt-box" id="cmtbox-${escHtml(p.id)}" style="display:none"></div>
     </div>
   </div>`;
 }
