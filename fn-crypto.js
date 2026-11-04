@@ -1,7 +1,7 @@
 /**
  * fn-crypto.js — Web 7.0 Cryptographic Foundation v3
  *
- * SICUREZZA MILITARE — QUATTRO STRATI:
+ * CRITTOGRAFIA AVANZATA — QUATTRO STRATI:
  *
  * STRATO 1 — FN8Lang (linguaggio finto, generato al primo avvio)
  *   • Tabella di sostituzione casuale salvata in localStorage del dispositivo
@@ -360,7 +360,7 @@ async function _aesDecrypt(key, { iv, ct }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// STRATO 2 — Anti-fingerprint testo (sicurezza militare)
+// STRATO 2 — Anti-fingerprint testo
 //
 // Ogni messaggio viene alterato con omoglifi Unicode e caratteri
 // zero-width prima di essere inviato al nodo Freenet.

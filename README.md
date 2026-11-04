@@ -7,6 +7,24 @@
 
 ---
 
+## Screenshot
+
+<table>
+<tr>
+<td align="center"><img src="screenshots/browser.jpg" width="320"/><br><b>Browser Freenet</b></td>
+<td align="center"><img src="screenshots/fresnettv.jpg" width="320"/><br><b>FreenetTV</b></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/fresnettv_player.jpg" width="320"/><br><b>FreenetTV — Player + Iscrivi</b></td>
+<td align="center"><img src="screenshots/freenetposts.jpg" width="320"/><br><b>FreenetPosts</b></td>
+</tr>
+<tr>
+<td align="center" colspan="2"><img src="screenshots/freenetgram.jpg" width="320"/><br><b>FreenetGram</b></td>
+</tr>
+</table>
+
+---
+
 ## App / Apps
 
 | App | Descrizione (IT) | Description (EN) | URL Freenet |
