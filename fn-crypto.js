@@ -1,211 +1,289 @@
 /**
- * fn-crypto.js — Web 7.0 Cryptographic Foundation
+ * fn-crypto.js — Web 7.0 Cryptographic Foundation v2
  *
- * DOPPIO STRATO / TWO-LAYER SYSTEM:
+ * DOPPIO STRATO AVANZATO:
  *
- * STRATO 1 — Linguaggio finto (FN7Lang)
- *   Ogni carattere viene sostituito con un simbolo inventato.
- *   Il testo codificato sembra una lingua aliena illeggibile.
- *   Senza la tabella di decodifica il testo è incomprensibile.
+ * STRATO 1 — FN8Lang (linguaggio finto avanzato)
+ *   • Ogni carattere → sequenza di 2–3 simboli da alfabeti reali ma rari
+ *     (Tifinagh, Vai, Bamum, Lisu, Old Italic, Cham, Mende Kikakui…)
+ *   • Separatori visivi casuali ogni N caratteri (sembrano punteggiatura)
+ *   • I numeri diventano sequenze di glifi numerici Vai
+ *   • Il risultato sembra una lingua scritta vera ma incomprensibile
  *
- * STRATO 2 — Crittografia reale (Web Crypto API)
- *   ECDH P-256: scambio chiavi anonimo (Diffie-Hellman)
- *   AES-GCM 256: cifratura simmetrica del messaggio
- *   ECDSA P-256: firma digitale dell'identità
+ * STRATO 2 — RSA-2048 + AES-GCM-256 (cifratura ibrida)
+ *   • RSA-OAEP SHA-256 (2048 bit): cifra la chiave AES di sessione
+ *   • AES-GCM-256: cifra il messaggio reale (con IV casuale)
+ *   • RSA-PSS SHA-256 (2048 bit): firma digitale dell'identità
+ *   • PBKDF2 + AES-GCM: protegge la chiave privata in localStorage
  *
- * IDENTITÀ ANONIMA:
- *   Ogni utente = coppia di chiavi (pubblica + privata)
- *   Nessuna email, nessun nome reale — solo la chiave pubblica è l'identità
- *   End-to-end: solo mittente e destinatario possono leggere
- *
- * USO:
- *   const FNC = await import('./fn-crypto.js');
- *   const me = await FNC.generateIdentity();
- *   const enc = await FNC.encryptFull("ciao", recipientPubKeyJwk);
- *   const dec = await FNC.decryptFull(enc, me.ecdhPrivate);
+ * IDENTITÀ:
+ *   Ogni utente ha solo una coppia RSA-2048.
+ *   Nessuna email, nessun nome — l'identità è solo la chiave pubblica.
+ *   Il fingerprint (SHA-256 della chiave pubblica) è l'unico identificativo.
  */
 
 'use strict';
 
 // ═══════════════════════════════════════════════════════════════════
-// STRATO 1 — FN7Lang: linguaggio finto di sostituzione
-// Ogni carattere ASCII/base ha un simbolo unico inventato.
-// La tabella è fissa e pubblica (l'oscuramento è per confondere,
-// la vera sicurezza viene dallo strato 2).
+// STRATO 1 — FN8Lang: linguaggio finto avanzato
+//
+// Ogni carattere ASCII viene mappato a una sequenza di 2 simboli
+// scelti da alfabeti Unicode rari e visivamente coerenti.
+// I separatori imitano la punteggiatura di una lingua reale.
 // ═══════════════════════════════════════════════════════════════════
 
-const _ENCODE = {
-  ' ':'⬚', '!':'ꙮ', '"':'ꝏ', '#':'ꞇ', '$':'ꞔ', '%':'ꞡ', '&':'ꞃ', "'":"ꞅ",
-  '(':'ꞑ', ')':'ꞓ', '*':'ꝙ', '+':'ꝛ', ',':'ꝝ', '-':'ꝟ', '.':'ꝡ', '/':'ꝣ',
-  '0':'ꝥ', '1':'ꝧ', '2':'ꝩ', '3':'ꝫ', '4':'ꝭ', '5':'ꝯ', '6':'ꝱ', '7':'ꝳ',
-  '8':'ꝵ', '9':'ꝷ', ':':'Ꝺ', ';':'Ꝼ', '<':'Ᵹ', '=':'ꝿ', '>':'ꞁ', '?':'ꞃ',
-  '@':'ꞅ', 'A':'ᚠ', 'B':'ᚢ', 'C':'ᚦ', 'D':'ᚨ', 'E':'ᚱ', 'F':'ᚲ', 'G':'ᚷ',
-  'H':'ᚹ', 'I':'ᚺ', 'J':'ᚾ', 'K':'ᛁ', 'L':'ᛃ', 'M':'ᛇ', 'N':'ᛈ', 'O':'ᛉ',
-  'P':'ᛊ', 'Q':'ᛏ', 'R':'ᛒ', 'S':'ᛖ', 'T':'ᛗ', 'U':'ᛚ', 'V':'ᛜ', 'W':'ᛞ',
-  'X':'ᛟ', 'Y':'ᛠ', 'Z':'ᛡ', '[':'ᛣ', '\\':'ᛥ', ']':'ᛧ', '^':'ᛩ', '_':'ᛪ',
-  '`':'᛫', 'a':'ꬰ', 'b':'ꬱ', 'c':'ꬲ', 'd':'ꬳ', 'e':'ꬴ', 'f':'ꬵ', 'g':'ꬶ',
-  'h':'ꬷ', 'i':'ꬸ', 'j':'ꬹ', 'k':'ꬺ', 'l':'ꬻ', 'm':'ꬼ', 'n':'ꬽ', 'o':'ꬾ',
-  'p':'ꬿ', 'q':'ꭀ', 'r':'ꭁ', 's':'ꭂ', 't':'ꭃ', 'u':'ꭄ', 'v':'ꭅ', 'w':'ꭆ',
-  'x':'ꭇ', 'y':'ꭈ', 'z':'ꭉ', '{':'ꭊ', '|':'ꭋ', '}':'ꭌ', '~':'ꭍ',
-  '\n':'⏎', '\t':'⇥'
-};
+// Simboli base da alfabeti rari (Tifinagh, Vai, Bamum, Lisu, Old Italic, Cham)
+const _SYM = [
+  'ⴰ','ⴱ','ⴲ','ⴳ','ⴴ','ⴵ','ⴶ','ⴷ','ⴸ','ⴹ','ⴺ','ⴻ','ⴼ','ⴽ','ⴾ','ⴿ',
+  'ꔀ','ꔁ','ꔂ','ꔃ','ꔄ','ꔅ','ꔆ','ꔇ','ꔈ','ꔉ','ꔊ','ꔋ','ꔌ','ꔍ','ꔎ','ꔏ',
+  'ꚠ','ꚡ','ꚢ','ꚣ','ꚤ','ꚥ','ꚦ','ꚧ','ꚨ','ꚩ','ꚪ','ꚫ','ꚬ','ꚭ','ꚮ','ꚯ',
+  'ꓐ','ꓑ','ꓒ','ꓓ','ꓔ','ꓕ','ꓖ','ꓗ','ꓘ','ꓙ','ꓚ','ꓛ','ꓜ','ꓝ','ꓞ','ꓟ',
+  'ꩠ','ꩡ','ꩢ','ꩣ','ꩤ','ꩥ','ꩦ','ꩧ','ꩨ','ꩩ','ꩪ','ꩫ','ꩬ','ꩭ','ꩮ','ꩯ',
+  'ꧠ','ꧡ','ꧢ','ꧣ','ꧤ','ꧥ','ꧦ','ꧧ','ꧨ','ꧩ','ꧪ','ꧫ','ꧬ','ꧭ','ꧮ','ꧯ',
+];
 
-// Decodifica inversa (generata automaticamente)
-const _DECODE = Object.fromEntries(Object.entries(_ENCODE).map(([k,v]) => [v,k]));
+// Separatori visivi (sembrano punteggiatura naturale di una lingua)
+const _SEP = ['꩟','᪪','᪫','᪬','꩞','᪭','꩝','᪣','᪤','᪥'];
 
-/** Strato 1: codifica testo in FN7Lang */
+// Glifi numerici Vai (per i numeri 0–9)
+const _NUMS = ['꘠','꘡','꘢','꘣','꘤','꘥','꘦','꘧','꘨','꘩'];
+
+// Mappa ogni codice ASCII (32–126) a una coppia di indici in _SYM
+// Deterministica: seed dal codice del carattere
+function _charToGlyphs(code) {
+  const i = (code * 31 + 7) % _SYM.length;
+  const j = (code * 53 + 17) % _SYM.length;
+  return _SYM[i] + _SYM[j];
+}
+
+// Build decode map (glyph-pair → char)
+const _ENCODE_MAP = new Map();
+const _DECODE_MAP = new Map();
+for (let c = 32; c <= 126; c++) {
+  const g = _charToGlyphs(c);
+  _ENCODE_MAP.set(String.fromCharCode(c), g);
+  _DECODE_MAP.set(g, String.fromCharCode(c));
+}
+// Newline e tab
+_ENCODE_MAP.set('\n', _SYM[0]+_SYM[1]); _DECODE_MAP.set(_SYM[0]+_SYM[1], '\n');
+_ENCODE_MAP.set('\t', _SYM[2]+_SYM[3]); _DECODE_MAP.set(_SYM[2]+_SYM[3], '\t');
+
+/** Strato 1: codifica testo → FN8Lang */
 export function obfuscate(text) {
-  return [...text].map(c => _ENCODE[c] ?? c).join('');
+  let out = '';
+  let count = 0;
+  for (const ch of text) {
+    if (ch >= '0' && ch <= '9') {
+      // I numeri diventano glifi numerici Vai + un simbolo
+      out += _NUMS[+ch] + _SYM[(+ch * 7 + 3) % _SYM.length];
+    } else {
+      out += _ENCODE_MAP.get(ch) ?? (ch + ch);
+    }
+    count++;
+    // Inserisci separatore visivo ogni 4–7 caratteri (pseudo-casuale ma deterministico)
+    if (count % (4 + (ch.charCodeAt(0) % 4)) === 0) {
+      out += _SEP[count % _SEP.length];
+    }
+  }
+  return out;
 }
 
-/** Strato 1: decodifica da FN7Lang a testo normale */
+/** Strato 1: decodifica FN8Lang → testo normale */
 export function deobfuscate(encoded) {
-  // usa regex per trovare i caratteri multi-byte
-  return [...encoded].map(c => _DECODE[c] ?? c).join('');
+  // Rimuovi separatori
+  let clean = encoded;
+  for (const s of _SEP) clean = clean.split(s).join('');
+
+  // Leggi a coppie di glifi
+  const chars = [...clean];
+  let result = '';
+  let i = 0;
+  while (i < chars.length) {
+    // Prova numero Vai
+    const numIdx = _NUMS.indexOf(chars[i]);
+    if (numIdx !== -1) {
+      result += String(numIdx);
+      i += 2; // skip numero + simbolo decorativo
+      continue;
+    }
+    // Prova coppia normale
+    if (i + 1 < chars.length) {
+      const pair = chars[i] + chars[i+1];
+      const ch = _DECODE_MAP.get(pair);
+      if (ch !== undefined) {
+        result += ch;
+        i += 2;
+        continue;
+      }
+    }
+    i++;
+  }
+  return result;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// STRATO 2 — Crittografia reale (Web Crypto API)
+// STRATO 2 — RSA-2048 + AES-GCM-256 (cifratura ibrida)
 // ═══════════════════════════════════════════════════════════════════
 
 const subtle = globalThis.crypto?.subtle;
 
-/** Genera identità anonima: coppia ECDH (cifratura) + ECDSA (firma) */
+const RSA_PARAMS = {
+  name: 'RSA-OAEP',
+  modulusLength: 2048,
+  publicExponent: new Uint8Array([1, 0, 1]),
+  hash: 'SHA-256'
+};
+const PSS_PARAMS = {
+  name: 'RSA-PSS',
+  modulusLength: 2048,
+  publicExponent: new Uint8Array([1, 0, 1]),
+  hash: 'SHA-256'
+};
+
+/**
+ * Genera identità anonima RSA-2048:
+ * - rsaEncrypt: coppia RSA-OAEP (cifra messaggi)
+ * - rsaSign:    coppia RSA-PSS  (firma)
+ */
 export async function generateIdentity() {
-  const [ecdhPair, ecdsaPair] = await Promise.all([
-    subtle.generateKey({ name:'ECDH', namedCurve:'P-256' }, true, ['deriveKey']),
-    subtle.generateKey({ name:'ECDSA', namedCurve:'P-256' }, true, ['sign','verify'])
+  const [encPair, sigPair] = await Promise.all([
+    subtle.generateKey(RSA_PARAMS, true, ['encrypt','decrypt']),
+    subtle.generateKey(PSS_PARAMS, true, ['sign','verify'])
   ]);
-  const [ecdhPublicJwk, ecdhPrivateJwk, ecdsaPublicJwk, ecdsaPrivateJwk] = await Promise.all([
-    subtle.exportKey('jwk', ecdhPair.publicKey),
-    subtle.exportKey('jwk', ecdhPair.privateKey),
-    subtle.exportKey('jwk', ecdsaPair.publicKey),
-    subtle.exportKey('jwk', ecdsaPair.privateKey)
+  const [encPub, encPriv, sigPub, sigPriv] = await Promise.all([
+    subtle.exportKey('jwk', encPair.publicKey),
+    subtle.exportKey('jwk', encPair.privateKey),
+    subtle.exportKey('jwk', sigPair.publicKey),
+    subtle.exportKey('jwk', sigPair.privateKey)
   ]);
+  const fp = await _fingerprint(encPub);
   return {
-    ecdhPublic:   ecdhPublicJwk,
-    ecdhPrivate:  ecdhPrivateJwk,
-    ecdsaPublic:  ecdsaPublicJwk,
-    ecdsaPrivate: ecdsaPrivateJwk,
-    // L'identità pubblica è solo la chiave pubblica ECDH (nessun nome, nessuna email)
-    id: ecdhPublicJwk.x + ecdhPublicJwk.y
+    encPublic:  encPub,
+    encPrivate: encPriv,
+    sigPublic:  sigPub,
+    sigPrivate: sigPriv,
+    fingerprint: fp   // es: "a3f2·7b1c·9e04·d85a"
   };
 }
 
-/** Salva identità in localStorage (cifrata con la propria password) */
-export async function saveIdentity(identity, password) {
-  const key = await _pwdKey(password);
-  const json = JSON.stringify(identity);
-  const enc = await _aesEncrypt(key, json);
-  localStorage.setItem('fn7_identity', JSON.stringify(enc));
-}
-
-/** Carica identità da localStorage */
-export async function loadIdentity(password) {
-  const raw = localStorage.getItem('fn7_identity');
-  if (!raw) return null;
-  const enc = JSON.parse(raw);
-  const key = await _pwdKey(password);
-  const json = await _aesDecrypt(key, enc);
-  return JSON.parse(json);
-}
-
 /**
- * Cifratura completa a doppio strato:
- * testo → FN7Lang → AES-GCM(ECDH key)
- * @param {string} plaintext  - testo in chiaro
- * @param {object} recipientEcdhPublicJwk - chiave pubblica ECDH del destinatario
- * @param {object} senderEcdhPrivateJwk  - chiave privata ECDH del mittente
- * @returns {object} pacchetto cifrato {iv, ct, epk} in base64
+ * Cifratura ibrida a doppio strato:
+ *   plaintext → FN8Lang → AES-GCM(chiave random) → RSA-OAEP(chiave AES)
+ *
+ * @param {string} plaintext
+ * @param {object} recipientEncPublicJwk — chiave pubblica RSA-OAEP del destinatario
+ * @returns {{ ekey, iv, ct }} tutto in base64
  */
-export async function encryptFull(plaintext, recipientEcdhPublicJwk, senderEcdhPrivateJwk) {
-  // Strato 1: obfuscazione
+export async function encryptFull(plaintext, recipientEncPublicJwk) {
+  // Strato 1
   const obfuscated = obfuscate(plaintext);
 
-  // Strato 2: ECDH shared secret → AES-GCM
-  const recipientPub = await subtle.importKey('jwk', recipientEcdhPublicJwk, { name:'ECDH', namedCurve:'P-256' }, false, []);
-  const senderPriv   = await subtle.importKey('jwk', senderEcdhPrivateJwk,   { name:'ECDH', namedCurve:'P-256' }, false, ['deriveKey']);
-  const aesKey = await subtle.deriveKey(
-    { name:'ECDH', public: recipientPub },
-    senderPriv,
-    { name:'AES-GCM', length:256 }, false, ['encrypt']
-  );
+  // Genera chiave AES-256 di sessione
+  const aesKey = await subtle.generateKey({ name:'AES-GCM', length:256 }, true, ['encrypt','decrypt']);
+  const aesRaw = await subtle.exportKey('raw', aesKey);
 
+  // Strato 2a: cifra il testo con AES-GCM
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encoded = new TextEncoder().encode(obfuscated);
   const ct = await subtle.encrypt({ name:'AES-GCM', iv }, aesKey, encoded);
 
+  // Strato 2b: cifra la chiave AES con RSA-OAEP del destinatario
+  const recvPub = await subtle.importKey('jwk', recipientEncPublicJwk, RSA_PARAMS, false, ['encrypt']);
+  const ekey = await subtle.encrypt({ name:'RSA-OAEP' }, recvPub, aesRaw);
+
   return {
-    iv: _b64(iv),
-    ct: _b64(new Uint8Array(ct)),
-    // La chiave pubblica del mittente è inclusa (anonima — solo la chiave, nessun nome)
-    spk: JSON.stringify(senderEcdhPrivateJwk ? {} : {})
+    ekey: _b64(new Uint8Array(ekey)),
+    iv:   _b64(iv),
+    ct:   _b64(new Uint8Array(ct))
   };
 }
 
 /**
- * Decifratura completa a doppio strato:
- * pacchetto → AES-GCM → FN7Lang → testo
- * @param {object} packet - {iv, ct, spk}
- * @param {object} recipientEcdhPrivateJwk - chiave privata del destinatario
- * @param {object} senderEcdhPublicJwk - chiave pubblica del mittente
+ * Decifratura ibrida a doppio strato:
+ *   RSA-OAEP(chiave AES) → AES-GCM → FN8Lang → plaintext
+ *
+ * @param {{ ekey, iv, ct }} packet
+ * @param {object} myEncPrivateJwk — chiave privata RSA-OAEP del destinatario
  */
-export async function decryptFull(packet, recipientEcdhPrivateJwk, senderEcdhPublicJwk) {
-  const senderPub = await subtle.importKey('jwk', senderEcdhPublicJwk, { name:'ECDH', namedCurve:'P-256' }, false, []);
-  const recvPriv  = await subtle.importKey('jwk', recipientEcdhPrivateJwk, { name:'ECDH', namedCurve:'P-256' }, false, ['deriveKey']);
-  const aesKey = await subtle.deriveKey(
-    { name:'ECDH', public: senderPub },
-    recvPriv,
-    { name:'AES-GCM', length:256 }, false, ['decrypt']
-  );
-  const iv = _unb64(packet.iv);
-  const ct = _unb64(packet.ct);
-  const dec = await subtle.decrypt({ name:'AES-GCM', iv }, aesKey, ct);
+export async function decryptFull(packet, myEncPrivateJwk) {
+  const myPriv = await subtle.importKey('jwk', myEncPrivateJwk, RSA_PARAMS, false, ['decrypt']);
+
+  // Decifra chiave AES con RSA privata
+  const aesRaw = await subtle.decrypt({ name:'RSA-OAEP' }, myPriv, _unb64(packet.ekey));
+  const aesKey = await subtle.importKey('raw', aesRaw, { name:'AES-GCM' }, false, ['decrypt']);
+
+  // Decifra messaggio con AES-GCM
+  const dec = await subtle.decrypt({ name:'AES-GCM', iv: _unb64(packet.iv) }, aesKey, _unb64(packet.ct));
   const obfuscated = new TextDecoder().decode(dec);
+
   // Rimuovi strato 1
   return deobfuscate(obfuscated);
 }
 
-/** Firma un messaggio con ECDSA (prova identità anonima) */
-export async function signMessage(data, ecdsaPrivateJwk) {
-  const key = await subtle.importKey('jwk', ecdsaPrivateJwk, { name:'ECDSA', namedCurve:'P-256' }, false, ['sign']);
-  const sig = await subtle.sign({ name:'ECDSA', hash:'SHA-256' }, key, new TextEncoder().encode(data));
+/** Firma RSA-PSS */
+export async function signMessage(data, sigPrivateJwk) {
+  const key = await subtle.importKey('jwk', sigPrivateJwk, PSS_PARAMS, false, ['sign']);
+  const sig = await subtle.sign(
+    { name:'RSA-PSS', saltLength: 32 }, key,
+    new TextEncoder().encode(data)
+  );
   return _b64(new Uint8Array(sig));
 }
 
-/** Verifica firma ECDSA */
-export async function verifySignature(data, signatureB64, ecdsaPublicJwk) {
-  const key = await subtle.importKey('jwk', ecdsaPublicJwk, { name:'ECDSA', namedCurve:'P-256' }, false, ['verify']);
-  return subtle.verify({ name:'ECDSA', hash:'SHA-256' }, key, _unb64(signatureB64), new TextEncoder().encode(data));
+/** Verifica firma RSA-PSS */
+export async function verifySignature(data, signatureB64, sigPublicJwk) {
+  const key = await subtle.importKey('jwk', sigPublicJwk, PSS_PARAMS, false, ['verify']);
+  return subtle.verify(
+    { name:'RSA-PSS', saltLength: 32 }, key,
+    _unb64(signatureB64),
+    new TextEncoder().encode(data)
+  );
 }
 
 /**
- * Hash anonimo dell'identità (fingerprint breve per mostrare all'utente)
- * Es: "7f3a·b2c9·1e4d"
+ * Salva identità in localStorage — cifrata con password utente (PBKDF2 + AES-GCM)
+ * La chiave privata RSA non lascia mai il dispositivo in chiaro.
  */
-export async function identityFingerprint(ecdhPublicJwk) {
-  const data = new TextEncoder().encode(ecdhPublicJwk.x + ecdhPublicJwk.y);
-  const hash = await subtle.digest('SHA-256', data);
-  const hex = [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2,'0')).join('');
-  return hex.slice(0,4) + '·' + hex.slice(4,8) + '·' + hex.slice(8,12);
+export async function saveIdentity(identity, password) {
+  const k = await _pwdKey(password);
+  const enc = await _aesEncrypt(k, JSON.stringify(identity));
+  localStorage.setItem('fn8_id', JSON.stringify(enc));
+}
+
+/** Carica e decifra identità da localStorage */
+export async function loadIdentity(password) {
+  const raw = localStorage.getItem('fn8_id');
+  if (!raw) return null;
+  try {
+    const k = await _pwdKey(password);
+    const json = await _aesDecrypt(k, JSON.parse(raw));
+    return JSON.parse(json);
+  } catch { return null; }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// UTILITÀ INTERNE
+// UTILITÀ
 // ═══════════════════════════════════════════════════════════════════
 
 function _b64(buf) {
-  return btoa(String.fromCharCode(...buf));
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
 }
 function _unb64(s) {
   return Uint8Array.from(atob(s), c => c.charCodeAt(0));
 }
 
+async function _fingerprint(rsaPublicJwk) {
+  const data = new TextEncoder().encode(rsaPublicJwk.n);
+  const hash = new Uint8Array(await subtle.digest('SHA-256', data));
+  const hex = [...hash].map(b => b.toString(16).padStart(2,'0')).join('');
+  return [0,4,8,12].map(i => hex.slice(i, i+4)).join('·');
+}
+
 async function _pwdKey(password) {
   const raw = await subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
-  const salt = new TextEncoder().encode('fn7salt_v1');
+  const salt = new TextEncoder().encode('fn8salt_v2_web70');
   return subtle.deriveKey(
-    { name:'PBKDF2', salt, iterations:100000, hash:'SHA-256' },
+    { name:'PBKDF2', salt, iterations:200000, hash:'SHA-256' },
     raw,
     { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
   );
