@@ -6,6 +6,14 @@
 <title>FreenetPosts — Decentralized Posts · Post Decentralizzati</title>
 <link rel="stylesheet" href="fn-theme.css">
 <script src="fn-api.js"></script>
+<script type="module">
+import * as FNC from './fn-crypto.js';
+window.FNC = FNC;
+(async()=>{
+  const raw = localStorage.getItem('fn7_identity_pub');
+  if(raw){ window._fn7id = JSON.parse(raw); }
+})();
+</script>
 <style>
 :root{--bg:#0d1b2a;--bg2:#112240;--bg3:#1a3358;--accent:#0a84ff;--cyan:#1da1f2;--green:#00c896;--text:#e8edf4;--text2:#8fa8c8;--border:#1e3a5f;--r:12px;}
 *{box-sizing:border-box;margin:0;padding:0;}

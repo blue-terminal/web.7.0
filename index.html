@@ -6,6 +6,14 @@
 <title>Web 7.0 Browser — Decentralized Web · Web Decentralizzato</title>
 <link rel="stylesheet" href="fn-theme.css">
 <script src="fn-api.js"></script>
+<script type="module">
+import * as FNC from './fn-crypto.js';
+window.FNC = FNC;
+(async()=>{
+  const raw = localStorage.getItem('fn7_identity_pub');
+  if(raw){ window._fn7id = JSON.parse(raw); }
+})();
+</script>
 <style>
 :root {
   --bg:     #0d1b2a;
