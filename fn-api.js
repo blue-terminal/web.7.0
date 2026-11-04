@@ -19,11 +19,27 @@
 const FN = (() => {
 
   // ── Configurazione nodi ───────────────────────────────────────────────────
-  const NODES = [
+  // Legge IP nodo remoto salvato (es. PC Linux sulla stessa LAN)
+  function _loadRemoteNode() {
+    try {
+      const ip = localStorage.getItem('fn_remote_node');
+      if (ip) return { name: 'Nodo remoto (' + ip + ')', base: 'http://' + ip + ':7509', ws: 'ws://' + ip + ':7509', type: 'new', apiVersion: 'v1' };
+    } catch {}
+    return null;
+  }
+
+  const NODES_BASE = [
     { name: 'Freenet (freenet-core, Rust)', base: 'http://127.0.0.1:7509', ws: 'ws://127.0.0.1:7509', type: 'new', apiVersion: 'v1' },
     { name: 'Fred/Hyphanet (Java)',         base: 'http://127.0.0.1:8888', ws: null,                  type: 'old', apiVersion: null },
     { name: 'Fred/Hyphanet alt',            base: 'http://127.0.0.1:8080', ws: null,                  type: 'old', apiVersion: null },
   ];
+
+  function getNodes() {
+    const remote = _loadRemoteNode();
+    return remote ? [remote, ...NODES_BASE] : NODES_BASE;
+  }
+
+  const NODES = NODES_BASE; // retrocompatibilità
 
   let activeNode  = null;
   let nodeVersion = null;
@@ -43,6 +59,12 @@ const FN = (() => {
     git:        null,
     portal:     null,
     telemetry:  null,
+    gitea:      null, // Gitea locale — porta 3000 — non è un contratto Freenet
+  };
+
+  // ── Servizi locali (non Freenet — girano sul PC/server locale) ────────────
+  const LOCAL_SERVICES = {
+    gitea: { label:'Gitea', desc:'Git locale', icon:'🐙', port:3000, path:'/' },
   };
 
   const FN_APP_INFO = {
@@ -69,7 +91,7 @@ const FN = (() => {
 
   // ── Rilevamento nodo (usa /v1/version per nuovo Freenet) ─────────────────
   async function detectNode() {
-    for (const node of NODES) {
+    for (const node of getNodes()) {
       try {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 1500);
@@ -126,6 +148,13 @@ const FN = (() => {
       'freenet://freenetorg': FN_APPS.freenetorg,
       'freenet://impostazioni': null,
     };
+
+    if (fnUrl === 'freenet://gitea') {
+      // Gitea è un servizio locale, non un contratto Freenet
+      const remoteIp = (() => { try { return localStorage.getItem('fn_remote_node'); } catch { return null; } })();
+      const base = remoteIp ? 'http://' + remoteIp : 'http://127.0.0.1';
+      return base + ':3000/';
+    }
 
     if (fnUrl in ROUTE_MAP) {
       const key = ROUTE_MAP[fnUrl];
