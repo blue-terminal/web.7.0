@@ -663,11 +663,17 @@ async function getVideoIDB(key){
 async function makeChkKey(arrayBuffer){
   const hash=await crypto.subtle.digest('SHA-256',arrayBuffer);
   const bytes=new Uint8Array(hash);
-  // Base58 (alfabeto Freenet / Bitcoin)
+  // Base58 senza BigInt (compatibile con tutti i WebView Android)
   const A='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let n=BigInt('0x'+[...bytes].map(b=>b.toString(16).padStart(2,'0')).join(''));
-  let s='';while(n>0n){s=A[Number(n%58n)]+s;n=n/58n;}
-  for(const b of bytes){if(b!==0)break;s='1'+s;}
+  const digits=[0];
+  for(const b of bytes){
+    let carry=b;
+    for(let j=0;j<digits.length;j++){carry+=digits[j]<<8;digits[j]=carry%58;carry=(carry/58)|0;}
+    while(carry>0){digits.push(carry%58);carry=(carry/58)|0;}
+  }
+  let s='';
+  for(const b of bytes){if(b!==0)break;s+='1';}
+  for(let i=digits.length-1;i>=0;i--)s+=A[digits[i]];
   return 'CHK@'+s.padEnd(44,'A').substring(0,44)+',AAAA,AAAA';
 }
 
