@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Il mio YouTube — FreenetTV</title>
+<title>FreenetTV — Decentralized Video · Video Decentralizzato</title>
 <link rel="stylesheet" href="fn-theme.css">
 <script src="fn-api.js"></script>
 <style>
@@ -301,7 +301,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
     <div id="m-login">
       <div class="modal-logo">▶</div>
       <h2>Accedi a FreenetTV</h2>
-      <p>Solo nome e password — nessuna email, anonimo</p>
+      <p>🔒 Accedi — nessuna email richiesta · <small style="color:#8b949e">Login — no email required</small></p>
       <div class="mfield"><label>Nome utente</label><input id="l-n" type="text" placeholder="nome_nodo"><div class="merr" id="le-n">Nome non trovato — <a onclick="showReg()">registrati</a></div></div>
       <div class="mfield"><label>Password</label><input id="l-p" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"><div class="merr" id="le-p">Password errata</div></div>
       <button class="mbtn" onclick="doLogin()">Accedi</button>
@@ -310,7 +310,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
     <div id="m-reg" style="display:none">
       <div class="modal-logo">▶</div>
       <h2>Crea account</h2>
-      <p>Anonimo · nessuna email · tutti i nodi ti vedono</p>
+      <p>🔒 Solo nome e password — nessuna email, nessun tracciamento<br><small style="color:#8b949e">Username &amp; password only — no email, no tracking</small></p>
       <div class="mfield"><label>Nome utente</label><input id="r-n" type="text" placeholder="nome_nodo"><div class="merr" id="re-n">Nome già in uso</div></div>
       <div class="mfield"><label>Password</label><input id="r-p" type="password" placeholder="min. 6 caratteri"><div class="merr" id="re-p">Troppo corta</div></div>
       <div class="mfield"><label>Conferma</label><input id="r-p2" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doReg()"><div class="merr" id="re-p2">Non coincidono</div></div>
