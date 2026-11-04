@@ -609,11 +609,22 @@ function loadUrl(url, skipHist) {
   if (nodeOnline) {
     frame.src = target;
   } else {
-    frame.srcdoc = `<html><body style="background:#0d1b2a;color:#e8edf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:14px;margin:0">
-      <div style="font-size:50px">⚠️</div>
-      <div style="font-size:18px;font-weight:700">Nodo Freenet non raggiungibile</div>
-      <div style="font-size:14px;color:#8fa8c8">Avvia l'app Freenet sul telefono o sul PC, poi ricarica.</div>
-      <div style="font-size:12px;color:#0a84ff;margin-top:4px">${target}</div>
+    // Nodo offline: pagina utile con istruzioni e link alle app locali sempre disponibili
+    frame.srcdoc = `<!DOCTYPE html><html><body style="background:#0d1b2a;color:#e8edf4;font-family:'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:0;margin:0;padding:24px;box-sizing:border-box">
+      <div style="max-width:420px;width:100%;text-align:center">
+        <div style="font-size:48px;margin-bottom:12px">🔌</div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:8px">Nodo Freenet non attivo</div>
+        <div style="font-size:13px;color:#8fa8c8;margin-bottom:24px;line-height:1.6">Questa app Freenet richiede un nodo P2P attivo.<br>Avvia il nodo, poi premi Ricarica.</div>
+        <button onclick="window.parent.postMessage({__freenet_shell__:true,type:'navigate',href:'freenet://home'},'*')" style="background:#0a84ff;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;width:100%">🏠 Torna alla home</button>
+        <button onclick="location.reload()" style="background:#1a3358;color:#e8edf4;border:1px solid #1e3a5f;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:20px;width:100%">↺ Ricarica (nodo attivo?)</button>
+        <div style="font-size:11px;color:#4a6a8a;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">Sempre disponibili (senza nodo)</div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <a onclick="window.parent.postMessage({__freenet_shell__:true,type:'navigate',href:'freenet://video'},'*')" style="background:#112240;border:1px solid #1e3a5f;border-radius:12px;padding:12px 16px;text-decoration:none;color:#e8edf4;cursor:pointer;font-size:13px;text-align:center;min-width:90px">▶️<br><b>FreenetTV</b></a>
+          <a onclick="window.parent.postMessage({__freenet_shell__:true,type:'navigate',href:'freenet://photos'},'*')" style="background:#112240;border:1px solid #1e3a5f;border-radius:12px;padding:12px 16px;text-decoration:none;color:#e8edf4;cursor:pointer;font-size:13px;text-align:center;min-width:90px">📸<br><b>Gram</b></a>
+          <a onclick="window.parent.postMessage({__freenet_shell__:true,type:'navigate',href:'freenet://posts'},'*')" style="background:#112240;border:1px solid #1e3a5f;border-radius:12px;padding:12px 16px;text-decoration:none;color:#e8edf4;cursor:pointer;font-size:13px;text-align:center;min-width:90px">🐤<br><b>Posts</b></a>
+        </div>
+        <div style="font-size:10px;color:#2a4a6a;margin-top:20px;word-break:break-all">${target}</div>
+      </div>
     </body></html>`;
   }
 }
