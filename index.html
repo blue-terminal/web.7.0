@@ -101,12 +101,12 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .search-box input { flex:1; padding: 11px 16px; border-radius: var(--r) 0 0 var(--r); background: var(--bg3); border: 1px solid var(--border); border-right: none; color: var(--text); font-size: 14px; outline: none; }
 .search-box input:focus { border-color: var(--accent); }
 .search-box button { padding: 11px 18px; background: var(--accent); border: none; border-radius: 0 var(--r) var(--r) 0; color: #fff; font-size: 14px; cursor: pointer; font-weight: 700; }
-.quick-links { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; width: 100%; max-width: 680px; margin-bottom: 32px; }
-.ql { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; cursor: pointer; transition: .15s; text-decoration: none; color: var(--text); position: relative; overflow: hidden; }
-.ql:hover { border-color: var(--accent); background: var(--bg3); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(10,132,255,.12); }
-.ql-icon { font-size: 32px; line-height: 1; }
-.ql-name { font-size: 14px; font-weight: 700; }
-.ql-desc { font-size: 11px; color: var(--text2); line-height: 1.4; }
+.quick-links { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; max-width: 680px; margin-bottom: 32px; }
+.ql { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; transition: .15s; text-decoration: none; color: var(--text); }
+.ql:hover { border-color: var(--accent); background: var(--bg3); }
+.ql-icon { font-size: 22px; line-height: 1; }
+.ql-name { font-size: 13px; font-weight: 700; }
+.ql-desc { display: none; }
 .node-info-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; width: 100%; max-width: 520px; font-size: 13px; }
 .node-info-box h3 { font-size: 13px; color: var(--text2); margin-bottom: 10px; letter-spacing: .5px; text-transform: uppercase; }
 .ni-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
