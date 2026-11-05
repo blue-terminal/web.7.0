@@ -1,0 +1,30 @@
+Web 7.0 per PC
+==============
+
+Video, foto, post, scacchi e ricerca sulla rete Freenet, senza server centrali.
+Il pacchetto contiene già tutto: il programma web70, il nodo Freenet e fdev ufficiali (versione 0.2.154) e le pagine.
+Non serve installare altro.
+
+Avvio
+-----
+Windows: apri la cartella web70 e fai doppio clic su web70.exe.
+         Se Windows mostra "PC protetto", scegli "Ulteriori informazioni" e poi "Esegui comunque":
+         il programma non è firmato con un certificato a pagamento.
+
+Mac:     apri la cartella web70, tieni premuto Ctrl, clicca su web70 e scegli "Apri".
+         Il programma non è firmato da Apple, quindi la prima volta il Mac chiede conferma.
+         In alternativa, dal Terminale: xattr -dr com.apple.quarantine web70  e poi  ./web70/web70
+
+Linux:   dal terminale, nella cartella estratta:  ./web70/web70
+
+Il browser si apre da solo su http://127.0.0.1:7070. Per chiudere Web 7.0 chiudi la finestra del programma.
+
+Opzioni
+-------
+--no-browser   non apre il browser
+--no-node      non avvia il nodo (se ne hai già uno acceso sulla porta 7509)
+
+I tuoi dati restano sul computer:
+Windows  %LOCALAPPDATA%\web70
+Mac      ~/Library/Application Support/web70
+Linux    ~/.local/share/web70

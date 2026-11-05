@@ -15,7 +15,8 @@ import time
 import webbrowser
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
+# Impacchettato (Windows, Mac, Linux) le pagine e i programmi stanno accanto all'eseguibile.
+HERE = Path(sys.executable if getattr(sys, 'frozen', False) else __file__).resolve().parent
 PAGES = HERE if (HERE / 'index.html').is_file() else HERE.parent
 PORT = int(os.environ.get('WEB70_PORT', '7070'))
 NODE_PORT = 7509
@@ -39,6 +40,8 @@ INJECT = ('<script>window.__fnToken=%s;window.Android={net(t,m,a,id){fetch("/__n
 
 
 def data_dir():
+    if sys.platform == 'darwin':
+        return Path.home() / 'Library/Application Support/web70'
     base = os.environ.get('LOCALAPPDATA') or os.environ.get('XDG_DATA_HOME') or str(Path.home() / '.local/share')
     return Path(base) / 'web70'
 
@@ -281,7 +284,8 @@ def main():
     FDEV = program('fdev')
     if HUB is None:
         sys.exit('File web70_hub.contract non trovato.')
-    node = start_node()
+    # --no-node: per chi ha già un nodo acceso, e per la prova automatica dei pacchetti.
+    node = None if '--no-node' in sys.argv else start_node()
     server = Server(('127.0.0.1', PORT), Handler)
     url = f'http://127.0.0.1:{PORT}/index.html'
     print(f'Web 7.0 è aperto su {url} — premi Ctrl+C per chiudere')
