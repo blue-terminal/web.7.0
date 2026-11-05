@@ -89,31 +89,51 @@ const FN = (() => {
     return node.base + '/USK@' + key + ',AAAA,AQACAAE,AAACAAA/0/';
   }
 
-  // ── Rilevamento nodo (usa /v1/version per nuovo Freenet) ─────────────────
+  // ── Rilevamento nodo — tutti in parallelo, vince il più veloce ──────────
   async function detectNode() {
-    for (const node of getNodes()) {
+    const nodes = getNodes();
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 1500);
+
+    async function tryNode(node) {
       try {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 1500);
-        let ok = false;
-        if (node.type === 'new') {
-          const r = await fetch(node.base + '/v1/version', { signal: ctrl.signal });
-          if (r.ok) {
-            const j = await r.json().catch(() => ({}));
-            nodeVersion = j.version || null;
-            ok = true;
-          }
-        } else {
-          await fetch(node.base + '/', { method: 'HEAD', signal: ctrl.signal, mode: 'no-cors' });
-          ok = true;
+        const r = await fetch(node.base + '/v1/version', { signal: ctrl.signal });
+        if (r.ok) {
+          const j = await r.json().catch(() => ({}));
+          return { node, version: j.version || null };
         }
-        clearTimeout(timer);
-        if (ok) { activeNode = node; return node; }
-      } catch { /* prossimo nodo */ }
+      } catch {
+        // CORS bloccato (file:// origin): prova no-cors
+        try {
+          await fetch(node.base + '/v1/version', { signal: ctrl.signal, mode: 'no-cors' });
+          return { node, version: null };
+        } catch { /* non raggiungibile */ }
+      }
+      throw new Error('unreachable');
     }
-    activeNode = null;
-    nodeVersion = null;
-    return null;
+
+    // Polyfill Promise.any compatibile Android 8+
+    function anyOf(promises) {
+      return new Promise((resolve, reject) => {
+        let left = promises.length;
+        if (!left) { reject(new Error('no nodes')); return; }
+        promises.forEach(p => p.then(resolve).catch(() => { if (!--left) reject(); }));
+      });
+    }
+
+    try {
+      const { node, version } = await anyOf(nodes.map(tryNode));
+      clearTimeout(timer);
+      ctrl.abort();
+      activeNode = node;
+      nodeVersion = version;
+      return node;
+    } catch {
+      clearTimeout(timer);
+      activeNode = null;
+      nodeVersion = null;
+      return null;
+    }
   }
 
   function getActiveNode()  { return activeNode; }
