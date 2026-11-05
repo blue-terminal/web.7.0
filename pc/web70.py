@@ -194,6 +194,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
+    # Dopo un aggiornamento il browser deve prendere le pagine e gli script nuovi, non quelli in memoria.
+    def end_headers(self):
+        if not any(h.lower().startswith(b'cache-control') for h in getattr(self, '_headers_buffer', [])):
+            self.send_header('Cache-Control', 'no-cache')
+        super().end_headers()
+
     def trusted_host(self):
         # Blocca il DNS rebinding: un altro sito non può presentarsi come questo server.
         return self.headers.get('Host') in (f'127.0.0.1:{PORT}', f'localhost:{PORT}')

@@ -5,7 +5,11 @@ on:
     inputs:
       release:
         description: Release a cui allegare i pacchetti
-        default: v2.0.0
+        default: v2.0.1
+        required: true
+      version:
+        description: Versione scritta nei nomi dei pacchetti
+        default: 2.0.1
         required: true
 
 permissions:
@@ -13,7 +17,7 @@ permissions:
 
 env:
   FREENET_VERSION: v0.2.154
-  WEB70_VERSION: 2.0.0
+  WEB70_VERSION: ${{ inputs.version }}
 
 jobs:
   build:
