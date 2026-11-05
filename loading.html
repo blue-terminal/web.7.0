@@ -2,173 +2,263 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Web 7.0 — Avvio</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--green:#2ea44f;--green2:#3fb95f;--bg:#0d1117;--bg2:#161b22;--text:#f0f6fc;--text2:#8b949e}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;
-  min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+:root{
+  --g:#2ea44f;--g2:#3fb95f;
+  --bg:#0d1117;--bg2:#161b22;
+  --text:#f0f6fc;--text2:#8b949e;
+  --accent:#0a84ff;
+}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;
+}
 
-/* sfondo animato */
-.bg-anim{position:fixed;inset:0;z-index:0;overflow:hidden}
-.bg-anim span{position:absolute;border-radius:50%;filter:blur(80px);opacity:.18;animation:drift 8s infinite alternate ease-in-out}
-.bg-anim span:nth-child(1){width:400px;height:400px;background:#2ea44f;top:-100px;left:-100px;animation-delay:0s}
-.bg-anim span:nth-child(2){width:300px;height:300px;background:#1a7f37;bottom:-80px;right:-80px;animation-delay:-3s}
-.bg-anim span:nth-child(3){width:200px;height:200px;background:#238636;top:50%;left:60%;animation-delay:-5s}
-@keyframes drift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(30px,20px) scale(1.1)}}
+/* blob di sfondo */
+.bg-blob{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.bg-blob b{position:absolute;border-radius:50%;filter:blur(90px);opacity:.15;animation:drift 9s infinite alternate ease-in-out}
+.bg-blob b:nth-child(1){width:clamp(200px,50vw,420px);height:clamp(200px,50vw,420px);background:var(--g);top:-20%;left:-15%;animation-delay:0s}
+.bg-blob b:nth-child(2){width:clamp(150px,35vw,300px);height:clamp(150px,35vw,300px);background:#1a7f37;bottom:-15%;right:-10%;animation-delay:-4s}
+.bg-blob b:nth-child(3){width:clamp(100px,20vw,200px);height:clamp(100px,20vw,200px);background:var(--accent);top:40%;left:55%;animation-delay:-7s}
+@keyframes drift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(25px,15px) scale(1.08)}}
 
-.card{position:relative;z-index:1;text-align:center;padding:48px 40px;max-width:420px;width:90%}
+.card{
+  position:relative;z-index:1;text-align:center;
+  padding:clamp(28px,6vw,56px) clamp(20px,5vw,40px);
+  width:min(380px,90vw);
+}
 
 /* logo */
-.logo-wrap{display:inline-flex;align-items:center;gap:12px;margin-bottom:36px}
-.logo-icon{width:48px;height:48px;background:var(--green);border-radius:12px;
-  display:flex;align-items:center;justify-content:center;font-size:24px;
-  box-shadow:0 0 24px rgba(46,164,79,.5)}
-.logo-text{font-size:28px;font-weight:700;letter-spacing:-1px}
-.logo-text sup{font-size:14px;color:var(--green);font-weight:600;vertical-align:super}
+.logo{display:inline-flex;align-items:center;gap:12px;margin-bottom:10px}
+.logo-icon{
+  width:clamp(44px,10vw,60px);height:clamp(44px,10vw,60px);
+  background:var(--g);border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(22px,5vw,30px);
+  box-shadow:0 0 28px rgba(46,164,79,.5);
+  flex-shrink:0;
+}
+.logo-text{font-size:clamp(22px,6vw,32px);font-weight:700;letter-spacing:-1px;white-space:nowrap}
+.logo-text sup{font-size:.5em;color:var(--g);font-weight:600;vertical-align:super}
 
-.subtitle{font-size:14px;color:var(--text2);margin-bottom:48px;line-height:1.6}
+.datetime{font-size:12px;color:var(--text2);margin-bottom:clamp(20px,4vw,32px);letter-spacing:.03em}
 
-/* timer */
-.timer-ring{position:relative;width:160px;height:160px;margin:0 auto 32px}
-.timer-ring svg{transform:rotate(-90deg)}
-.ring-bg{fill:none;stroke:var(--bg2);stroke-width:8}
-.ring-fg{fill:none;stroke:var(--green);stroke-width:8;stroke-linecap:round;
-  stroke-dasharray:439.8;stroke-dashoffset:0;transition:stroke-dashoffset .9s linear,stroke .5s}
-.timer-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.timer-mm{font-size:40px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.timer-label{font-size:11px;color:var(--text2);margin-top:4px;letter-spacing:.05em;text-transform:uppercase}
+/* spinner */
+.spin-wrap{position:relative;width:clamp(80px,20vw,120px);height:clamp(80px,20vw,120px);margin:0 auto clamp(20px,4vw,32px)}
+.spin-wrap svg{position:absolute;inset:0;width:100%;height:100%}
+.r1{fill:none;stroke:rgba(46,164,79,.13);stroke-width:6}
+.r2{fill:none;stroke:var(--g);stroke-width:6;stroke-linecap:round;
+  stroke-dasharray:220;stroke-dashoffset:60;animation:sp1 1.4s linear infinite}
+.r3{fill:none;stroke:rgba(63,185,80,.4);stroke-width:3;stroke-linecap:round;
+  stroke-dasharray:120;stroke-dashoffset:30;animation:sp2 2.1s linear infinite reverse}
+@keyframes sp1{to{stroke-dashoffset:280}}
+@keyframes sp2{to{stroke-dashoffset:-120}}
+.spin-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(22px,5vw,36px)}
 
-/* barra progresso */
-.prog-wrap{margin-bottom:12px}
-.prog-bar{height:4px;background:var(--bg2);border-radius:2px;overflow:hidden}
-.prog-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green2));
-  width:0%;transition:width .9s linear;border-radius:2px}
-.prog-txt{font-size:12px;color:var(--text2);margin-top:8px}
-
-/* stato */
-.status{font-size:13px;color:var(--text2);margin-top:24px;min-height:20px}
+/* testo stato */
+.status{font-size:14px;color:var(--text2);margin-bottom:8px;min-height:22px;line-height:1.4}
 .dot{display:inline-block;animation:blink 1.2s infinite}
 .dot:nth-child(2){animation-delay:.2s}
 .dot:nth-child(3){animation-delay:.4s}
 @keyframes blink{0%,80%,100%{opacity:0}40%{opacity:1}}
 
-/* button (finale) */
-.btn-open{display:none;margin-top:32px;padding:14px 40px;border-radius:8px;
-  background:var(--green);color:#fff;font-size:15px;font-weight:600;
-  border:none;cursor:pointer;width:100%;transition:background .2s;letter-spacing:.02em}
-.btn-open:hover{background:var(--green2)}
-.btn-open.show{display:block;animation:pop .3s ease}
+/* badge nodo trovato */
+.badge{
+  display:none;margin:12px 0;padding:10px 18px;border-radius:10px;
+  background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);
+  color:#3fb950;font-size:13px;font-weight:600;line-height:1.4;
+}
+.badge.show{display:block;animation:pop .3s ease}
+.badge.err{background:rgba(255,100,50,.1);border-color:rgba(255,100,50,.3);color:#ff6432}
 @keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
+
+/* bottone apri */
+.btn{
+  display:none;margin-top:18px;padding:clamp(12px,3vw,16px) 40px;
+  border-radius:12px;background:var(--g);color:#fff;
+  font-size:clamp(14px,3.5vw,16px);font-weight:700;
+  border:none;cursor:pointer;width:100%;
+  transition:background .2s, transform .1s;letter-spacing:.03em;
+}
+.btn:hover{background:var(--g2)}
+.btn:active{transform:scale(.97)}
+.btn.show{display:block;animation:pop .3s ease}
+
+.skip{font-size:11px;color:rgba(255,255,255,.18);margin-top:16px;cursor:pointer;user-select:none}
 </style>
 </head>
 <body>
-<div class="bg-anim"><span></span><span></span><span></span></div>
-
+<div class="bg-blob"><b></b><b></b><b></b></div>
 <div class="card">
-  <div class="logo-wrap">
+  <div class="logo">
     <div class="logo-icon">🌐</div>
     <div class="logo-text">Web 7.0<sup>β</sup></div>
   </div>
-  <div class="subtitle">
-    Connessione alla rete Freenet P2P<br>
-    Nodo in sincronizzazione — attendi qualche istante
-  </div>
+  <div class="datetime" id="dt"></div>
 
-  <div class="timer-ring">
-    <svg width="160" height="160" viewBox="0 0 160 160">
-      <circle class="ring-bg" cx="80" cy="80" r="70"/>
-      <circle class="ring-fg" id="ring" cx="80" cy="80" r="70"/>
+  <div class="spin-wrap">
+    <svg viewBox="0 0 120 120">
+      <circle class="r1" cx="60" cy="60" r="50"/>
+      <circle class="r2" cx="60" cy="60" r="50"/>
+      <circle class="r3" cx="60" cy="60" r="38"/>
     </svg>
-    <div class="timer-num">
-      <div class="timer-mm" id="tnum">3:00</div>
-      <div class="timer-label">rimanenti</div>
-    </div>
+    <div class="spin-icon">🌐</div>
   </div>
 
-  <div class="prog-wrap">
-    <div class="prog-bar"><div class="prog-fill" id="pfill"></div></div>
-    <div class="prog-txt" id="ptxt">0%</div>
+  <div class="status" id="st">
+    Avvio<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
   </div>
-
-  <div class="status" id="status">
-    Avvio nodo Freenet<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
-  </div>
-
-  <button class="btn-open" id="btn-open" onclick="openWeb7()">
-    🚀 Apri Web 7.0
-  </button>
+  <div id="badge" class="badge"></div>
+  <button class="btn" id="btn" onclick="openWeb7()">🚀 Apri Web 7.0</button>
+  <p class="skip" onclick="openWeb7()">Apri senza nodo →</p>
 </div>
 
 <script>
-const TOTAL = 180; // 3 minuti
-const CIRC  = 2 * Math.PI * 70; // 439.8
-const STEPS = [
-  [0,   'Avvio nodo Freenet'],
-  [20,  'Connessione ai peer'],
-  [40,  'Sincronizzazione routing table'],
-  [60,  'Verifica contratti locali'],
-  [75,  'Caricamento Web 7.0'],
-  [90,  'Quasi pronto'],
-  [100, 'Pronto! Apertura in corso…'],
-];
-
-let elapsed = 0;
-const ring  = document.getElementById('ring');
-const tnum  = document.getElementById('tnum');
-const pfill = document.getElementById('pfill');
-const ptxt  = document.getElementById('ptxt');
-const stEl  = document.getElementById('status');
-const btnO  = document.getElementById('btn-open');
-
-ring.style.strokeDasharray = CIRC;
-
-function updateStatus(pct) {
-  let msg = STEPS[0][1];
-  for (const [p, m] of STEPS) { if (pct >= p) msg = m; }
-  stEl.innerHTML = msg + (pct < 100
-    ? '<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>'
-    : '');
-}
-
-const iv = setInterval(() => {
-  elapsed++;
-  const pct  = Math.min((elapsed / TOTAL) * 100, 100);
-  const left = Math.max(TOTAL - elapsed, 0);
-  const mm   = Math.floor(left / 60);
-  const ss   = String(left % 60).padStart(2, '0');
-
-  tnum.textContent  = mm + ':' + ss;
-  pfill.style.width = pct + '%';
-  ptxt.textContent  = Math.floor(pct) + '%';
-
-  // anello SVG: svuota man mano che il tempo passa
-  const offset = CIRC * (elapsed / TOTAL);
-  ring.style.strokeDashoffset = offset;
-
-  // cambia colore quando siamo quasi alla fine
-  if (pct > 85) ring.style.stroke = '#3fb95f';
-
-  updateStatus(pct);
-
-  if (elapsed >= TOTAL) {
-    clearInterval(iv);
-    ring.style.stroke = '#2ea44f';
-    btnO.classList.add('show');
-    // apertura automatica dopo 1 secondo
-    setTimeout(openWeb7, 1000);
+/* ── Orologio ──────────────────────────────────────────────── */
+(function clock(){
+  const el=document.getElementById('dt');
+  function tick(){
+    const n=new Date();
+    el.textContent=n.toLocaleDateString('it-IT',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})
+      +' · '+n.toLocaleTimeString('it-IT');
   }
-}, 1000);
+  tick(); setInterval(tick,1000);
+})();
 
-function openWeb7() {
-  window.location.href = 'index.html';
+/* ── Helpers UI ─────────────────────────────────────────────── */
+const st=document.getElementById('st');
+const badge=document.getElementById('badge');
+const btn=document.getElementById('btn');
+
+function setStatus(msg,dots){
+  st.innerHTML=msg+(dots?'<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>':'');
+}
+function showBadge(msg,err){
+  badge.textContent=msg;
+  badge.className='badge show'+(err?' err':'');
+}
+function showBtn(label){
+  if(label) btn.textContent=label;
+  btn.classList.add('show');
 }
 
-// skip manuale: doppio click sul timer
-document.querySelector('.timer-ring').addEventListener('dblclick', () => {
-  clearInterval(iv);
-  openWeb7();
+/* ── Apri Web 7.0 ─────────────────────────────────────────── */
+let _nodeUrl=null;
+function openWeb7(){
+  if(_nodeUrl && !_nodeUrl.includes('127.0.0.1') && !_nodeUrl.includes('localhost')){
+    const ip=_nodeUrl.replace(/^https?:\/\//,'').split(':')[0];
+    try{ localStorage.setItem('fn_remote_node',ip); }catch{}
+  }
+  const target=location.protocol==='file:'
+    ?'file:///android_asset/index.html'
+    :'./index.html';
+  window.location.replace(target);
+}
+
+/* Android: lo stato del nodo arriva dal bridge Java. Valori: Manager.Status */
+function bootAndroid(){
+  setStatus('Avvio nodo Freenet',true);
+  if(Android.startNode) Android.startNode();
+
+  let retries=0;
+  const MAX=25; // 25 secondi
+
+  function poll(){
+    retries++;
+    const s=Android.getStatus ? Android.getStatus() : 'UNKNOWN';
+
+    if(s==='STARTED'){
+      showBadge('✓ Nodo Freenet attivo');
+      setStatus('Connesso!');
+      openWeb7();
+      return;
+    }
+    if(s==='ERROR' || s==='PAUSED'){
+      setStatus(s==='ERROR' ? 'Errore del nodo' : 'Nodo in pausa (rete o batteria)');
+      showBadge('📴 Modalità offline — P2P non disponibile',true);
+      showBtn('🚀 Apri Web 7.0');
+      setTimeout(openWeb7,1500);
+      return;
+    }
+    if(retries>=MAX){
+      setStatus('Nodo non disponibile');
+      showBadge('📴 Modalità offline — P2P non disponibile',true);
+      showBtn('🚀 Apri Web 7.0');
+      openWeb7();
+      return;
+    }
+    const labels=[
+      'Avvio nodo Freenet','Avvio nodo locale','Connessione peer',
+      'Routing in corso','Sincronizzazione','Quasi pronto',
+    ];
+    setStatus(labels[Math.min(Math.floor(retries/5),labels.length-1)],true);
+    setTimeout(poll,1000);
+  }
+  setTimeout(poll,800);
+}
+
+/* PC: senza bridge Java, l'unico modo di vedere il nodo è la sua API su loopback */
+async function bootPC(){
+  const LAN_NODES=['http://127.0.0.1:7509','http://127.0.0.1:8888'];
+  try{
+    const ip=localStorage.getItem('fn_remote_node');
+    if(ip) LAN_NODES.push('http://'+ip+':7509');
+  }catch{}
+
+  setStatus('Verifica nodo locale',true);
+
+  async function tryBase(base,ms){
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),ms);
+    try{
+      const r=await fetch(base+'/v1/version',{signal:ctrl.signal});
+      clearTimeout(t);
+      if(r.ok) return base;
+    }catch{}
+    clearTimeout(t);
+    throw new Error('no');
+  }
+
+  function anyOf(ps){
+    return new Promise((res,rej)=>{
+      let left=ps.length;
+      if(!left){rej();return;}
+      ps.forEach(p=>p.then(res).catch(()=>{if(!--left)rej();}));
+    });
+  }
+
+  try{
+    const base=await anyOf(LAN_NODES.map(b=>tryBase(b,900)));
+    _nodeUrl=base;
+    showBadge('✓ Nodo attivo — '+base.replace('http://',''));
+    setStatus('Connesso!');
+    openWeb7();
+  }catch{
+    setStatus('Nodo Freenet non trovato');
+    showBadge('⚠ Avvia il nodo Freenet e riprova',true);
+    showBtn('🚀 Apri Web 7.0');
+    openWeb7();
+  }
+}
+
+/* ── Avvio ─────────────────────────────────────────────────── */
+if(typeof Android!=='undefined' && Android.getStatus){
+  bootAndroid();
+}else{
+  bootPC();
+}
+
+/* doppio tap per saltare */
+let _lt=0;
+document.body.addEventListener('touchend',()=>{
+  const n=Date.now();
+  if(n-_lt<400) openWeb7();
+  _lt=n;
 });
 </script>
 </body>

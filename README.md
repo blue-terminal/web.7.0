@@ -27,28 +27,19 @@
 
 ## App / Apps
 
-| App | Descrizione (IT) | Description (EN) | URL Freenet |
-|-----|-----------------|------------------|-------------|
-| 🌐 **Browser Freenet** | Browser per la rete Freenet con archivio siti | Freenet browser with site archive | `/v1/contract/web/browser-fn/` |
-| 📺 **FreenetTV** | YouTube decentralizzato — video, like, commenti | Decentralized YouTube — video, likes, comments | `/v1/contract/web/fresnettv/` |
-| 📷 **FreenetGram** | Instagram decentralizzato — foto, hashtag | Decentralized Instagram — photos, hashtags | `/v1/contract/web/frenetgram/` |
-| 📝 **FreenetPosts** | Twitter/X decentralizzato — post 280 caratteri | Decentralized Twitter/X — 280 char posts | `/v1/contract/web/freenetposts/` |
+Tutte le pagine sono scritte a mano solo per Web 7.0 e girano sulla rete Freenet, senza server centrali.
 
----
+| App | Cosa fa |
+|-----|---------|
+| 📺 **FreenetTV** | Video educativi: canali, commenti, voti, Studio, impostazioni, diretta |
+| 📷 **FreenetGram** | Foto e storie con commenti e profili |
+| 📝 **FreenetPosts** | Post brevi con risposte e rilanci |
+| ♞ **Scacchi** | Contro il computer o persone della rete |
+| 🔍 **Cerca** | Motore di ricerca sui contenuti di Web 7.0 e sui siti aggiunti all'indice |
 
-## Accesso / Access
+**Come funziona:** video e foto stanno in contratti Freenet (massimo 50 MiB ciascuno, i video lunghi sono divisi in parti). Commenti, voti, elenchi e partite stanno in `web70_hub.contract`, una bacheca condivisa dove ogni messaggio è firmato e richiede un piccolo calcolo contro lo spam.
 
-**IT:**
-- Solo **nome utente + password** — nessuna email richiesta
-- Nessun tracciamento, nessun algoritmo, nessun ban
-- Tutti i dati salvati in locale (localStorage) sul tuo dispositivo
-- Pubblicato sulla rete Freenet P2P — permanente e non censurabile
-
-**EN:**
-- **Username + password only** — no email required
-- No tracking, no algorithm, no bans
-- All data saved locally (localStorage) on your device
-- Published on Freenet P2P network — permanent and uncensorable
+**Limiti:** sul telefono il collegamento fra pagina e nodo resta HTTP locale su `127.0.0.1`, i nodi comunicano fra loro con il protocollo Freenet su UDP, e all'avvio la lista dei gateway si scarica da `freenet.org`.
 
 ---
 
@@ -66,8 +57,8 @@ iwr -useb https://raw.githubusercontent.com/blue-terminal/web70-core/main/instal
 
 ### Debian / Ubuntu
 ```bash
-sudo dpkg -i web70_1.0.0_all.deb
-web70-install
+sudo dpkg -i web70_2.0.0_amd64.deb
+web70
 ```
 
 ### Android
