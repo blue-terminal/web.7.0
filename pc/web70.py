@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import webbrowser
 from pathlib import Path
@@ -60,6 +61,12 @@ FDEV = None
 HUB = next((p for p in (HERE / 'web70_hub.contract', PAGES / 'web70_hub.contract') if p.is_file()), None)
 SITES = data_dir() / 'sites'
 topic_ids = {}
+# Letture dalla rete: una sola alla volta per argomento, e per pochi secondi si riusa la risposta.
+# Senza, ogni pagina aperta lancia le stesse letture lente e il browser rinuncia prima della fine.
+FRESH = 20
+read_cache = {}
+read_locks = {}
+locks_guard = threading.Lock()
 
 
 def fdev(*args, timeout=HUB_TIMEOUT + 10):
@@ -103,6 +110,23 @@ def topic_id(topic):
 
 
 def hub_get(topic):
+    with locks_guard:
+        lock = read_locks.setdefault(topic, threading.Lock())
+    with lock:
+        cached = read_cache.get(topic)
+        if cached and time.time() - cached[0] < FRESH:
+            return cached[1]
+        try:
+            state = hub_get_network(topic)
+        except OSError:
+            if cached:
+                return cached[1]
+            raise
+        read_cache[topic] = (time.time(), state)
+        return state
+
+
+def hub_get_network(topic):
     with tempfile.NamedTemporaryFile(delete=False) as state:
         path = state.name
     try:
@@ -128,12 +152,14 @@ def hub_post(topic, message):
     try:
         output = fdev('execute', 'update', identifier, state.name, '--timeout', str(HUB_TIMEOUT))
         if 'Error:' not in output:
+            read_cache.pop(topic, None)
             return
         # Il primo messaggio crea il contratto; un PUT su uno esistente si unisce.
         output = fdev('execute', 'put', '--code', str(HUB), '--parameters', parameters.name, '--subscribe',
                       '--timeout', str(HUB_TIMEOUT), 'contract', '--state', state.name)
         if 'Error:' in output:
             raise OSError(last_line(output))
+        read_cache.pop(topic, None)
     finally:
         os.unlink(state.name)
         os.unlink(parameters.name)
@@ -211,7 +237,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Cache-Control', 'no-store')
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # La pagina è stata chiusa o ricaricata prima della risposta.
 
     def do_POST(self):
         origin = self.headers.get('Origin')
@@ -261,6 +290,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 class Server(http.server.ThreadingHTTPServer):
     daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        if not isinstance(sys.exc_info()[1], (BrokenPipeError, ConnectionResetError)):
+            super().handle_error(request, client_address)
 
 
 def node_running():

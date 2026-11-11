@@ -109,3 +109,10 @@ Built on the real ecosystem at [github.com/freenet](https://github.com/freenet).
 
 Libero per tutti / Free for everyone — open source, nessun tracciamento, nessuna email.  
 No tracking, no email, no central server. Peer-to-peer only.
+
+
+## ⚠️ Avviso / Disclaimer
+
+**Italiano** — Questo progetto è realizzato esclusivamente a scopo educativo e di studio. Il software è fornito "così com'è", senza garanzie di alcun tipo. L'autore non si assume alcuna responsabilità per l'uso che ne viene fatto, né per i contenuti pubblicati dagli utenti sulla rete, né per eventuali danni diretti o indiretti. Chi lo usa se ne assume la piena responsabilità e deve rispettare le leggi del proprio paese.
+
+**English** — This project is made for educational and study purposes only. The software is provided "as is", without warranty of any kind. The author takes no responsibility for how it is used, for content published by users on the network, or for any direct or indirect damage. Anyone who uses it does so at their own risk and must follow the laws of their own country.
