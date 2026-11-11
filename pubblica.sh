@@ -6,6 +6,6 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 SITE="$(mktemp -d)"
 trap 'rm -rf "$SITE"' EXIT
 
-cp "$ROOT"/{index,video,photos,posts,chess,search}.html "$ROOT"/{fn-api,fn-net,social,chess-engine}.js "$ROOT"/{fn-theme,web7}.css "$SITE/"
+cp "$ROOT"/{index,video,photos,posts,chess,search}.html "$ROOT"/{fn-api,fn-ws,fn-net,social,chess-engine}.js "$ROOT"/{fn-theme,web7}.css "$ROOT"/web70_hub.contract "$ROOT"/web70_client.wasm "$SITE/"
 fdev website init web70 2>/dev/null || true
 fdev website publish "$SITE" --key web70
