@@ -107,7 +107,7 @@ def hub_get(topic):
         path = state.name
     try:
         output = fdev('execute', 'get', topic_id(topic), '-o', path, '--timeout', str(HUB_TIMEOUT))
-        if 'missing contract' in output:
+        if 'missing contract' in output or 'not found' in output.lower():
             return '{"m":[]}'
         if 'Error:' in output:
             raise OSError(last_line(output))
