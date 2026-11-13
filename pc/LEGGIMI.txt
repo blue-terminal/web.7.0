@@ -23,6 +23,10 @@ Opzioni
 -------
 --no-browser   non apre il browser
 --no-node      non avvia il nodo (se ne hai già uno acceso sulla porta 7509)
+--telefono INDIRIZZO  usa il nodo del telefono Android sulla stessa Wi-Fi, attraverso SSH.
+               Nell'app: Impostazioni → Accesso dal PC (SSH). L'indirizzo e la password
+               sono in "Collegamento dal PC". Serve il comando ssh (c'è già su
+               Linux, Mac e Windows 10 e successivi).
 
 I tuoi dati restano sul computer:
 Windows  %LOCALAPPDATA%\web70

@@ -318,13 +318,41 @@ def start_node():
     return process
 
 
+PHONE_SSH_PORT = 2222
+PHONE = re.compile(r'[A-Za-z0-9.-]{1,253}(:[0-9]{1,5})?\Z')
+
+
+def phone_tunnel(target):
+    # Il nodo del telefono attraverso SSH: la password la chiede ssh qui nel terminale.
+    if not PHONE.match(target):
+        sys.exit('Indirizzo del telefono non valido: scrivi --telefono seguito dall\'indirizzo che mostra l\'app')
+    host, _, port = target.partition(':')
+    if node_running():
+        sys.exit(f'La porta {NODE_PORT} è già occupata da un nodo su questo PC: chiudilo prima.')
+    print(f'Mi collego al telefono {host}: scrivi la password che vedi nell\'app (Impostazioni → Collegamento dal PC).')
+    process = subprocess.Popen([shutil.which('ssh') or sys.exit('Comando ssh non trovato su questo PC'),
+                                '-N', '-o', 'ExitOnForwardFailure=yes', '-o', 'ServerAliveInterval=30',
+                                '-L', f'127.0.0.1:{NODE_PORT}:127.0.0.1:{NODE_PORT}',
+                                '-p', port or str(PHONE_SSH_PORT), f'freenet@{host}'])
+    for _ in range(120):
+        if node_running():
+            print('Collegato al nodo del telefono.')
+            return process
+        if process.poll() is not None:
+            sys.exit('Collegamento SSH non riuscito: controlla indirizzo, password e che "Accesso dal PC" sia attivo.')
+        time.sleep(1)
+    process.terminate()
+    sys.exit('Il telefono non risponde: il nodo è avviato?')
+
+
 def main():
     global FDEV
     FDEV = program('fdev')
     if HUB is None:
         sys.exit('File web70_hub.contract non trovato.')
     # --no-node: per chi ha già un nodo acceso, e per la prova automatica dei pacchetti.
-    node = None if '--no-node' in sys.argv else start_node()
+    phone = sys.argv[sys.argv.index('--telefono') + 1] if '--telefono' in sys.argv[:-1] else None
+    node = phone_tunnel(phone) if phone else None if '--no-node' in sys.argv else start_node()
     server = Server(('127.0.0.1', PORT), Handler)
     url = f'http://127.0.0.1:{PORT}/index.html'
     print(f'Web 7.0 è aperto su {url} — premi Ctrl+C per chiudere')
